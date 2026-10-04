@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Wrangler's local cache and dev state
+.wrangler/
+
+# Local secrets for `wrangler dev` (never commit these)
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+
+# Logs and OS clutter
+*.log
+.DS_Store
+Thumbs.db

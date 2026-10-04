@@ -1,0 +1,24 @@
+name = "ahl-tracker"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+
+# The web page (HTML, CSS, JS) lives in ./public and is served as static files.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# Nightly data is stored here. This namespace already exists in your account.
+[[kv_namespaces]]
+binding = "DATA"
+id = "5d1646683e404a6daef4182cccd9447c"
+
+# Cloudflare crons run on UTC. These four times cover 3:00 and 3:30 a.m. Pacific
+# in both daylight time (10:xx UTC) and standard time (11:xx UTC). The worker
+# checks the Pacific clock and ignores the runs that aren't 3 a.m. locally.
+# The 3:30 run is a retry that only does anything if 3:00 failed.
+[triggers]
+crons = ["0 10 * * *", "30 10 * * *", "0 11 * * *", "30 11 * * *"]
+
+[vars]
+# Leave SEASON_ID empty to auto-detect the current AHL regular season.
+SEASON_ID = ""
