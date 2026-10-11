@@ -8,162 +8,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --ice: #EEF3F6; --surface: #FFFFFF; --ink: #1B2733; --muted: #5B6B79; --rule: #D5DEE5;
-    --red: #C8102E; --blue: #0B5CAD; --crease: #D6EAF7; --fav: #FFF6D6;
-    --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
-    --body: "Barlow", "Segoe UI", system-ui, sans-serif;
-    box-sizing: border-box;
-    padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
-    color-scheme: light dark;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --ice: #0E1620; --surface: #15202B; --ink: #E5ECF1; --muted: #93A4B3; --rule: #263441;
-      --red: #FF5263; --blue: #5AA9F0; --crease: #1A3550; --fav: #3A3320;
-    }
-  }
-  *, *::before, *::after { box-sizing: inherit; }
-  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
-  body { margin: 0; background: var(--ice); color: var(--ink); font: 16px/1.5 var(--body); -webkit-font-smoothing: antialiased; }
-  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px 64px; }
-
-  header { padding: 32px 0 20px; display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
-  h1 { font: 700 clamp(2.4rem, 7vw, 3.75rem)/0.9 var(--display); margin: 0; letter-spacing: -0.01em; }
-  .updated { color: var(--muted); font-size: 0.9rem; margin: 6px 0 0; }
-  label.fav-pick { display: grid; gap: 4px; font-size: 0.85rem; color: var(--muted); }
-  select { font: 500 1rem var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; min-width: 240px; max-width: 100%; }
-
-  /* Favorite team panel: styled like a center-ice faceoff spot */
-  .fav { background: var(--surface); border-left: 6px solid var(--red); border-radius: 4px 12px 12px 4px; padding: 18px 20px; margin: 0 0 24px;
-         display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; align-items: center; }
-  .fav[hidden] { display: none; }
-  .fav .logo.big { width: 64px; height: 64px; grid-row: span 2; }
-  .fav .logo.big .abbr { font-size: 1.25rem; border-width: 2.5px; }
-  .fav h2 { font: 700 1.9rem/1 var(--display); margin: 0; }
-  .fav .line { color: var(--muted); }
-  .fav .stats { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px 24px; margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--rule); }
-  .fav .stat.wide { grid-column: span 2; }
-  .fav .stat b { display: block; font: 700 1.6rem/1.1 var(--display); font-variant-numeric: tabular-nums; }
-  .fav .stat > span { font-size: 0.85rem; color: var(--muted); }
-
-  nav.tabs { display: flex; gap: 4px; background: var(--surface); padding: 4px; border-radius: 10px; width: fit-content; max-width: 100%; overflow-x: auto; margin-bottom: 18px; }
-  nav.tabs button { font: 600 1.05rem var(--display); color: var(--muted); background: none; border: 0; padding: 8px 16px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
-  nav.tabs button[aria-selected="true"] { background: var(--ink); color: var(--surface); }
-  button:focus-visible, select:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
-
-  section.group { margin-bottom: 28px; }
-  section.group h3 { font: 600 1.5rem/1.1 var(--display); margin: 0 0 8px; display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; }
-  section.group h3 small { font: 400 0.85rem var(--body); color: var(--muted); }
-  .scroll { overflow-x: auto; background: var(--surface); border-radius: 10px; }
-  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 0.95rem; }
-  th { font: 600 0.8rem var(--body); color: var(--muted); text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
-  td { padding: 8px; text-align: right; border-bottom: 1px solid var(--rule); white-space: nowrap; }
-  th.team, td.team { text-align: left; }
-  th.rank, td.rank { text-align: center; width: 2.2em; color: var(--muted); }
-  tr:last-child td { border-bottom: 0; }
-  td.team { font-weight: 600; min-width: 190px; }
-  td.team .tn { display: flex; align-items: center; gap: 10px; }
-  .logo { position: relative; width: 28px; height: 28px; flex: none; display: inline-block; }
-  .logo .abbr { position: absolute; inset: 0; display: grid; place-items: center; border: 1.5px solid var(--muted); border-radius: 50%;
-                font: 700 0.62rem/1 var(--display); letter-spacing: 0.02em; color: var(--ink); background: var(--crease); }
-  .logo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-  td.team .div-tag { font-weight: 400; color: var(--muted); font-size: 0.8rem; }
-  td.pts { font-weight: 600; }
-  tr.is-fav td { background: var(--fav); }
-  .W { color: #1D8A4C; } .L { color: var(--red); }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .W, :root:not([data-theme="light"]) .up { color: #4FCB84; } }
-  :root[data-theme="dark"] .W, :root[data-theme="dark"] .up { color: #4FCB84; }
-
-  /* Rink lines: blue line under the last bye spot, red line under the last playoff spot */
-  tr.blue-line td { border-bottom: 3px solid var(--blue); }
-  tr.red-line td { border-bottom: 4px solid var(--red); }
-  .legend { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 0.85rem; color: var(--muted); margin: -6px 0 18px; }
-  .legend > span::before { content: ""; display: inline-block; width: 22px; height: 0; vertical-align: middle; margin-right: 6px; }
-  .legend .b::before { border-top: 3px solid var(--blue); }
-  .legend .r::before { border-top: 4px solid var(--red); }
-  .legend .arrows::before { display: none; }
-  .legend .arrows .up, .legend .arrows .down { margin-right: 2px; }
-
-  /* Weekly movement arrows */
-  th.mv, td.mv { text-align: left; width: 2.6em; padding-left: 0; padding-right: 4px; font-size: 0.82rem; font-weight: 600; }
-  .up { color: #1D8A4C; } .down { color: var(--red); } .mv-none { color: var(--muted); }
-  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-
-  /* Team name opens a dropdown with last week's details */
-  button.expand { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 10px; border-radius: 6px; }
-  button.expand:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
-  button.expand:hover .full, button.expand:hover .short { text-decoration: underline; text-underline-offset: 3px; }
-  .chev { color: var(--muted); font-size: 0.8rem; transition: transform .15s; }
-  button.expand[aria-expanded="true"] .chev { transform: rotate(180deg); }
-  tr.open td { border-bottom-color: transparent; }
-  tr.detail td { text-align: left; white-space: normal; background: var(--ice); padding: 14px 16px 16px; }
-  .wk { max-width: 640px; }
-  .wk p { margin: 0 0 8px; }
-  .wk-head { font-weight: 500; }
-  .wk-games { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 18px; }
-  .wk-games .when { color: var(--muted); font-size: 0.85rem; }
-  .wk-games .W, .wk-games .L { font-weight: 700; }
-  .wk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px 20px; }
-  .wk-grid b { font: 700 1.35rem/1.1 var(--display); }
-  .wk-grid span:last-child { display: block; font-size: 0.82rem; color: var(--muted); }
-  .wk-grid .up, .wk-grid .down, .wk-grid .mv-none { font-size: 0.9rem; font-weight: 600; margin-left: 4px; }
-  .wk-none { color: var(--muted); font-size: 0.9rem; }
-  .fav-mv { font-size: 1rem; }
-
-  .odds { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; min-width: 96px; }
-  .bar { width: 48px; height: 6px; background: var(--crease); border-radius: 3px; overflow: hidden; }
-  .bar i { display: block; height: 100%; background: var(--blue); }
-  .odds.hi .bar i { background: #1D8A4C; } .odds.lo .bar i { background: var(--red); }
-
-  @media (max-width: 640px) { .hide-sm, .chev { display: none; } table { font-size: 0.88rem; } th.mv, td.mv { width: 2.2em; font-size: 0.75rem; } th.rank, td.rank { width: 1.6em; } button.expand { gap: 6px; } td.team { min-width: 0; } td.team .logo { width: 24px; height: 24px; } td.team .logo .abbr { font-size: 0.55rem; } td.team .tn { gap: 6px; } th, td { padding: 8px 5px; } .bar { display: none; } .odds { min-width: 0; } .wrap { padding: 0 10px 48px; } td.team .full { display: none; } }
-  @media (max-width: 400px) { .hide-xs { display: none; } th, td { padding: 8px 4px; } td.team .logo { width: 20px; height: 20px; } td.team .logo .abbr { font-size: 0.5rem; } }
-  @media (min-width: 641px) { td.team .short, .show-sm { display: none; } }
-
-  /* Trends chart */
-  .trend-controls { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-bottom: 14px; }
-  .trend-controls label { display: grid; gap: 4px; font-size: 0.85rem; color: var(--muted); }
-  .trend-controls select { min-width: 200px; }
-  .chart-wrap { position: relative; background: var(--surface); border-radius: 10px; padding: 8px 4px 0; touch-action: pan-y; }
-  .chart { display: block; font-family: var(--body); user-select: none; -webkit-user-select: none; }
-  .chart .grid { stroke: var(--rule); stroke-width: 1; }
-  .chart .ytick { fill: var(--muted); font-size: 12px; text-anchor: end; dominant-baseline: middle; font-variant-numeric: tabular-nums; }
-  .chart .xtick { fill: var(--muted); font-size: 12px; text-anchor: middle; }
-  .chart .xtitle { fill: var(--muted); font-size: 12px; text-anchor: middle; }
-  .chart .cut-blue { stroke: var(--blue); stroke-width: 2; stroke-dasharray: 6 5; }
-  .chart .cut-red { stroke: var(--red); stroke-width: 2.5; stroke-dasharray: 6 5; }
-  .chart .half { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 3 4; }
-  .chart .guide { stroke: var(--ink); stroke-width: 1; opacity: 0.35; }
-  .chart .series .hit { stroke: transparent; stroke-width: 14; fill: none; cursor: pointer; }
-  .chart .label { cursor: pointer; }
-  .chart .label text { font-size: 13px; font-weight: 600; dominant-baseline: middle; }
-  .chart .label text.strong { font-weight: 800; font-size: 14px; }
-  .chart.small .label text { font-size: 11.5px; } .chart.small .label text.strong { font-size: 12.5px; }
-  .chart.small .ytick, .chart.small .xtick { font-size: 11px; }
-  .chart .dim { opacity: 0.15; }
-  @media (prefers-reduced-motion: no-preference) { .chart .series, .chart .label { transition: opacity .2s; } }
-  .tip { position: absolute; z-index: 2; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; font-size: 0.82rem;
-         box-shadow: 0 6px 20px rgba(20, 30, 40, 0.18); pointer-events: none; min-width: 150px; }
-  .tip.below { position: static; box-shadow: none; border: 0; border-top: 1px solid var(--rule); border-radius: 0 0 10px 10px; margin: 0 4px; padding: 10px 8px 12px; }
-  .tip.below ul { columns: 2; column-gap: 18px; }
-  .tip p { margin: 0 0 4px; color: var(--muted); }
-  .tip p b { color: var(--ink); }
-  .tip ul { list-style: none; margin: 0; padding: 0; }
-  .tip li { display: flex; align-items: center; gap: 6px; line-height: 1.55; }
-  .tip li i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-  .tip li span { margin-left: auto; padding-left: 12px; font-variant-numeric: tabular-nums; }
-  .tip li.strong { font-weight: 700; }
-  .chart-note { color: var(--muted); font-size: 0.85rem; margin: 10px 0 24px; max-width: 70ch; }
-
-  .note { color: var(--muted); font-size: 0.9rem; max-width: 70ch; }
-  .note h4 { font: 600 1.15rem var(--display); color: var(--ink); margin: 32px 0 4px; }
-  .msg { background: var(--surface); padding: 24px; border-radius: 10px; }
-  .msg.error { border-left: 6px solid var(--red); }
-  @media (prefers-reduced-motion: no-preference) { .bar i { transition: width .5s ease-out; } }
-</style>
+<link rel="stylesheet" href="/styles.css">
 </head>
-<body>
+<body data-view="division">
 <div class="wrap">
   <header>
     <div>
@@ -177,24 +24,21 @@
 
   <div class="fav" id="favPanel" hidden></div>
 
-  <nav class="tabs" role="tablist" aria-label="Standings view">
-    <button role="tab" data-view="division" aria-selected="true">Divisions</button>
-    <button role="tab" data-view="conference" aria-selected="false">Conferences</button>
-    <button role="tab" data-view="league" aria-selected="false">League</button>
-    <button role="tab" data-view="odds" aria-selected="false">Playoff odds</button>
-    <button role="tab" data-view="trends" aria-selected="false">Trends</button>
+  <nav class="pages" aria-label="Pages">
+    <ul>
+      <li><a href="/" aria-current="page">Divisions</a></li>
+      <li><a href="/conferences">Conferences</a></li>
+      <li><a href="/league">League</a></li>
+      <li><a href="/odds">Playoff odds</a></li>
+      <li><a href="/trends">Trends</a></li>
+    </ul>
   </nav>
 
   <main id="main"><div class="msg">Loading…</div></main>
 
-  <div class="note">
-    <h4>How the odds work</h4>
-    <p>Every morning the app replays the rest of the season 5,000 times using the real remaining schedule. Each team's strength comes from its points percentage so far, pulled toward average early in the season when a hot or cold start says less. Results include overtime and shootout losses, which earn a point.</p>
-    <p>Playoff spots follow the AHL format: the top six teams in the Atlantic, the top five in the North and Central, and the top seven in the Pacific make it, ranked by points percentage. The top two in the Atlantic, top three in the North and Central, and the Pacific winner skip the best-of-three first round.</p>
-    <p>Data comes from the AHL's official stats feed and refreshes daily at 3 a.m. Pacific. The weekly arrows compare standings after the last two Sundays, so they roll forward every Monday morning once the weekend's games are final.</p>
-  </div>
+  <footer class="site">Updated daily at 3 a.m. Pacific. <a href="/odds#how">How the playoff odds work</a></footer>
 </div>
-<script src="model.js"></script>
-<script src="app.js"></script>
+<script src="/model.js"></script>
+<script src="/app.js"></script>
 </body>
 </html>

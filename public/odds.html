@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Playoff odds: AHL standings</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏒</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body data-view="odds">
+<div class="wrap">
+  <header>
+    <div>
+      <h1>AHL standings</h1>
+      <p class="updated" id="updated">Loading the latest standings…</p>
+    </div>
+    <label class="fav-pick">Your team
+      <select id="fav"><option value="">Choose a team</option></select>
+    </label>
+  </header>
+
+  <div class="fav" id="favPanel" hidden></div>
+
+  <nav class="pages" aria-label="Pages">
+    <ul>
+      <li><a href="/">Divisions</a></li>
+      <li><a href="/conferences">Conferences</a></li>
+      <li><a href="/league">League</a></li>
+      <li><a href="/odds" aria-current="page">Playoff odds</a></li>
+      <li><a href="/trends">Trends</a></li>
+    </ul>
+  </nav>
+
+  <main id="main"><div class="msg">Loading…</div></main>
+
+  <div class="note" id="how">
+    <h4>How the odds work</h4>
+    <p>Every morning the app replays the rest of the season 5,000 times using the real remaining schedule. Each team's strength comes from its points percentage so far, pulled toward average early in the season when a hot or cold start says less. Results include overtime and shootout losses, which earn a point.</p>
+    <p>Playoff spots follow the AHL format: every team makes it except the bottom two in the Atlantic, North and Central and the bottom three in the Pacific, ranked by points percentage. This season that's the top five of seven in the Atlantic, top six of eight in the North, top five of seven in the Central, and top seven of ten in the Pacific. Enough top teams skip the best-of-three first round (the bye) that four teams per division reach the second round: three in the Atlantic and Central, two in the North, and one in the Pacific.</p>
+    <p>Data comes from the AHL's official stats feed and refreshes daily at 3 a.m. Pacific. The weekly arrows compare standings after the last two Sundays, so they roll forward every Monday morning once the weekend's games are final.</p>
+  </div>
+</div>
+<script src="/model.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

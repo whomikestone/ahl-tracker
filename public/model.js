@@ -1,16 +1,19 @@
 // Standings math and playoff simulation. Runs in the browser.
 (function (root) {
-  // AHL Calder Cup qualification: top N by points percentage in each division,
-  // with the top few earning a bye past the best-of-three first round.
-  const PLAYOFF_RULES = {
-    Atlantic: { spots: 6, byes: 2 },
-    North: { spots: 5, byes: 3 },
-    Central: { spots: 5, byes: 3 },
-    Pacific: { spots: 7, byes: 1 },
-  };
+  // AHL Calder Cup qualification (format since 2022): every team qualifies except the
+  // bottom two in the Atlantic, North and Central and the bottom three in the Pacific.
+  // Byes go to enough top teams that four per division reach the second round
+  // (first-round winners plus bye teams = 4), which works out to byes = 8 - spots.
+  // Derived from division size, so realignments like Bridgeport moving to Hamilton
+  // (and the North) for 2026-27 are handled automatically.
+  // To override a division by hand: PLAYOFF_RULES.North = { spots: 6, byes: 2 }.
+  const PLAYOFF_RULES = {};
+  const MISS = { Pacific: 3 };
 
   function rulesFor(div, size) {
-    return PLAYOFF_RULES[div] || { spots: Math.max(1, size - 2), byes: 1 };
+    if (PLAYOFF_RULES[div]) return PLAYOFF_RULES[div];
+    const spots = Math.max(1, size - (MISS[div] || 2));
+    return { spots, byes: Math.max(1, Math.min(spots, 8 - spots)) };
   }
 
   const pctOf = (t) => (t.gp ? t.pts / (2 * t.gp) : 0);

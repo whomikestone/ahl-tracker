@@ -1,7 +1,7 @@
 (function () {
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const logo = (id) => `https://assets.leaguestat.com/ahl/logos/${encodeURIComponent(id)}.png`;
+  const logo = (id) => `/logo/${encodeURIComponent(id)}`; // served and stored by your Worker
   // Team logo with an abbreviation badge underneath; the badge shows until the logo loads, or if it can't.
   const abbr = (t) => (t.code || t.name.split(/\s+/).map((w) => w[0]).join("")).slice(0, 3).toUpperCase();
   const logoBox = (t, cls = "") => `<span class="logo ${cls}"><span class="abbr">${esc(abbr(t))}</span><img src="${logo(t.id)}" alt="" loading="lazy" onload="this.previousElementSibling.style.visibility='hidden'" onerror="this.remove()"></span>`;
@@ -15,7 +15,7 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch {} },
   };
 
-  const state = { data: null, st: null, odds: null, week: null, open: new Set(), view: store.get("view") || "division", fav: store.get("fav") || "" };
+  const state = { data: null, st: null, odds: null, week: null, open: new Set(), view: document.body.dataset.view || "division", fav: store.get("fav") || "" };
   const shortDay = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const weekRange = (w) => {
     const [a, b] = [new Date(`${w.start}T12:00:00`), new Date(`${w.end}T12:00:00`)];
@@ -370,7 +370,6 @@
   }
 
   function render() {
-    document.querySelectorAll("nav.tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.view === state.view)));
     if (!state.st) return;
     const views = { division: renderDivision, conference: renderConference, league: renderLeague, odds: renderOdds, trends: renderTrends };
     $("#main").innerHTML = (views[state.view] || renderDivision)();
@@ -385,9 +384,6 @@
     sel.value = state.st.byId.has(state.fav) ? state.fav : "";
   }
 
-  document.querySelectorAll("nav.tabs button").forEach((b) => b.addEventListener("click", () => {
-    state.view = b.dataset.view; store.set("view", state.view); render();
-  }));
   $("#main").addEventListener("click", (e) => {
     const b = e.target.closest("button.expand");
     if (!b) return;

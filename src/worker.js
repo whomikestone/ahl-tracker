@@ -13,8 +13,8 @@ const CONFERENCE = { Atlantic: "Eastern", North: "Eastern", Central: "Western", 
 
 // Used only if the feed doesn't say which division a team is in.
 const DIVISION_BY_NAME = {
-  Atlantic: ["Bridgeport", "Charlotte", "Hartford", "Hershey", "Lehigh", "Providence", "Springfield", "Wilkes"],
-  North: ["Belleville", "Cleveland", "Laval", "Rochester", "Syracuse", "Toronto", "Utica"],
+  Atlantic: ["Charlotte", "Hartford", "Hershey", "Lehigh", "Providence", "Springfield", "Wilkes"],
+  North: ["Belleville", "Cleveland", "Hamilton", "Laval", "Rochester", "Syracuse", "Toronto", "Utica"],
   Central: ["Chicago", "Grand Rapids", "Iowa", "Manitoba", "Milwaukee", "Rockford", "Texas"],
   Pacific: ["Abbotsford", "Bakersfield", "Calgary", "Coachella", "Colorado", "Henderson", "Ontario", "San Diego", "San Jose", "Tucson"],
 };
@@ -79,7 +79,9 @@ async function refresh(env) {
     .filter((t) => t.id && t.name)
     .map((t) => {
       const div = divisionFor(t);
-      return { id: String(t.id), name: t.name, code: t.code || "", nickname: t.nickname || "", city: t.city || "", div, conf: CONFERENCE[div] || "" };
+      const logo = [t.team_logo_url, t.logo_url, t.team_logo, t.logo, ...Object.entries(t).filter(([k]) => /logo/i.test(k)).map(([, v]) => v)]
+        .find((v) => typeof v === "string" && /^https?:\/\//.test(v)) || "";
+      return { id: String(t.id), name: t.name, code: t.code || "", nickname: t.nickname || "", city: t.city || "", div, conf: CONFERENCE[div] || "", logo };
     });
   const ids = new Set(teams.map((t) => t.id));
 
@@ -130,11 +132,55 @@ function pacific(date) {
   return { day: `${get("year")}-${get("month")}-${get("day")}`, hour: Number(get("hour")), minute: Number(get("minute")) };
 }
 
+// ---- Team logos ----
+// If a team ever shows an outdated logo, add its correct image address here.
+// To find one: open the team's page on theahl.com, right-click the logo, and
+// choose "Copy Image Address". Then bump LOGO_VERSION so cached logos refresh.
+const LOGO_OVERRIDES = {
+  // "Ontario Reign": "https://...png",
+};
+const LOGO_VERSION = 1;
+const LOGO_DAYS = 7;
+
+function logoCandidates(team, seasonId) {
+  const base = "https://assets.leaguestat.com/ahl/logos/";
+  return [...new Set([
+    LOGO_OVERRIDES[team.name],          // your manual fix, if any
+    team.logo,                          // current logo address from the AHL feed
+    `${base}${team.id}_${seasonId}.png`, // this season's logo
+    `${base}50x50/${team.id}_${seasonId}.png`,
+    `${base}${team.id}.png`,            // generic logo (can be outdated)
+  ].filter(Boolean))];
+}
+
+async function serveLogo(env, ctx, id) {
+  const key = `logo:v${LOGO_VERSION}:${id}`;
+  const cached = await env.DATA.getWithMetadata(key, { type: "arrayBuffer" });
+  const headers = (ct, src) => ({ "Content-Type": ct, "Cache-Control": `public, max-age=${LOGO_DAYS * 86400}`, "X-Logo-Source": src });
+  if (cached.value) return new Response(cached.value, { headers: headers(cached.metadata.ct, cached.metadata.src) });
+
+  const data = JSON.parse((await env.DATA.get("data")) || "null");
+  const team = data && data.teams.find((t) => t.id === id);
+  if (!team) return new Response("Unknown team", { status: 404 });
+  for (const src of logoCandidates(team, data.season.id)) {
+    try {
+      const res = await fetch(src, { headers: { Referer: "https://theahl.com/", "User-Agent": "Mozilla/5.0 (personal AHL standings tracker)" } });
+      const ct = res.headers.get("Content-Type") || "";
+      if (!res.ok || !ct.startsWith("image/")) continue;
+      const body = await res.arrayBuffer();
+      if (body.byteLength < 200) continue; // placeholder pixel, not a real logo
+      ctx.waitUntil(env.DATA.put(key, body, { expirationTtl: LOGO_DAYS * 86400, metadata: { ct, src, name: team.name } }));
+      return new Response(body, { headers: headers(ct, src) });
+    } catch {}
+  }
+  return new Response("No logo found", { status: 404, headers: { "Cache-Control": "public, max-age=3600" } });
+}
+
 const json = (body, status = 200, extra = {}) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...extra } });
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/data") {
@@ -148,6 +194,15 @@ export default {
         }
       }
       return new Response(raw, { headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=300" } });
+    }
+
+    // Team logos, served from this site: /logo/<team id>
+    if (url.pathname.startsWith("/logo/")) return serveLogo(env, ctx, decodeURIComponent(url.pathname.slice(6)));
+
+    // Which address each stored logo came from, for spotting outdated ones.
+    if (url.pathname === "/api/logos") {
+      const list = await env.DATA.list({ prefix: `logo:v${LOGO_VERSION}:` });
+      return json(list.keys.map((k) => ({ team: k.metadata && k.metadata.name, source: k.metadata && k.metadata.src })), 200, { "Cache-Control": "no-store" });
     }
 
     if (url.pathname === "/api/status") {

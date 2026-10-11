@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trends: AHL standings</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏒</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body data-view="trends">
+<div class="wrap">
+  <header>
+    <div>
+      <h1>AHL standings</h1>
+      <p class="updated" id="updated">Loading the latest standings…</p>
+    </div>
+    <label class="fav-pick">Your team
+      <select id="fav"><option value="">Choose a team</option></select>
+    </label>
+  </header>
+
+  <div class="fav" id="favPanel" hidden></div>
+
+  <nav class="pages" aria-label="Pages">
+    <ul>
+      <li><a href="/">Divisions</a></li>
+      <li><a href="/conferences">Conferences</a></li>
+      <li><a href="/league">League</a></li>
+      <li><a href="/odds">Playoff odds</a></li>
+      <li><a href="/trends" aria-current="page">Trends</a></li>
+    </ul>
+  </nav>
+
+  <main id="main"><div class="msg">Loading…</div></main>
+
+  <footer class="site">Updated daily at 3 a.m. Pacific. <a href="/odds#how">How the playoff odds work</a></footer>
+</div>
+<script src="/model.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

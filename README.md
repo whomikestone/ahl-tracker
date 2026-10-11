@@ -49,6 +49,17 @@ waiting until 3 a.m. After that, it updates nightly.
   this is unlikely on the free plan. If it happens, the $5/month Workers Paid plan
   removes the limit.
 
+## Team logos
+
+Logos are downloaded from the AHL once, stored in your Cloudflare KV for a week,
+and served from your own site at `/logo/<team id>`.
+
+- `/api/logos` lists which image address each stored logo came from.
+- If a team shows an outdated logo, add the correct image address to
+  `LOGO_OVERRIDES` at the top of the logo section in `src/worker.js`, raise
+  `LOGO_VERSION` by one, and redeploy. To get the address, right-click the logo on
+  the team's page at theahl.com and choose "Copy Image Address".
+
 ## How it's built
 
 - `src/worker.js` downloads teams and the full season schedule with results at
@@ -59,4 +70,8 @@ waiting until 3 a.m. After that, it updates nightly.
 - `public/model.js` builds standings from game results and simulates the remaining
   season 5,000 times. Playoff spots per division are set in `PLAYOFF_RULES` at the
   top of that file; update them if the AHL changes its format.
-- `public/index.html` and `public/app.js` are the page itself.
+- The site has five pages, each with its own address: `/` (divisions),
+  `/conferences`, `/league`, `/odds`, and `/trends`. They're the `.html` files in
+  `public/`; Cloudflare serves `conferences.html` at `/conferences`, and so on.
+  They share `styles.css` for the look and `app.js` for filling in the content.
+  Your favorite team and chart settings are remembered across pages.
