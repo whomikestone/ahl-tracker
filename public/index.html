@@ -36,7 +36,30 @@
 
   <main id="main"><div class="msg">Loading…</div></main>
 
-  <footer class="site">Updated daily at 3 a.m. Pacific. <a href="/odds#how">How the playoff odds work</a></footer>
+  <details class="colguide">
+    <summary>What the columns mean</summary>
+    <div class="colguide-body">
+      <p><b>How teams are ranked.</b> The AHL ranks teams by points percentage (PCT), not total points, because teams have played different numbers of games. Ties go to the team with more regulation wins (RW), then more regulation and overtime wins (ROW), then more total wins, then the better goal differential. Some sites, like FloHockey, sort by total points instead, so their order can differ from this one.</p>
+      <dl>
+        <dt>GP</dt><dd>Games played.</dd>
+        <dt>W</dt><dd>Wins of any kind: regulation, overtime, or shootout. Each is worth 2 points. <span class="tag">Used to rank</span></dd>
+        <dt>L</dt><dd>Regulation losses, worth 0 points.</dd>
+        <dt>OTL</dt><dd>Overtime losses. Worth 1 point.</dd>
+        <dt>SOL</dt><dd>Shootout losses. Also worth 1 point.</dd>
+        <dt>PTS</dt><dd>Points: 2 per win, 1 per overtime or shootout loss.</dd>
+        <dt>PCT</dt><dd>Points percentage: points earned divided by points possible. A team with 6 points in 4 games has .750. <span class="tag">Used to rank</span></dd>
+        <dt>RW</dt><dd>Regulation wins, not counting overtime or shootout wins. The first tiebreaker. <span class="tag">Used to rank</span></dd>
+        <dt>ROW</dt><dd>Regulation and overtime wins, not counting shootout wins. The second tiebreaker. <span class="tag">Used to rank</span></dd>
+        <dt>GD</dt><dd>Goal differential: goals scored minus goals allowed. A late tiebreaker, but mostly a sign of how well a team is really playing.</dd>
+        <dt>L10</dt><dd>Record over the last 10 games, as W-L-OTL-SOL.</dd>
+        <dt>STK</dt><dd>Current streak, like W3 for three wins in a row.</dd>
+        <dt>Playoffs</dt><dd>This site's estimated chance of making the playoffs, from simulating the rest of the season. Not an official AHL number.</dd>
+        <dt>▲ ▼</dt><dd>Places a team moved during last week's games (Monday to Sunday).</dd>
+      </dl>
+      <p>Records are written the AHL way, W-L-OTL-SOL, so 3-1-0-1 means 3 wins, 1 regulation loss, no overtime losses, and 1 shootout loss. On phones, swipe the table sideways to see every column; the team stays pinned on the left.</p>
+    </div>
+  </details>
+  <footer class="site">Updated daily at 3 a.m. Pacific. <a href="/odds#how">How the playoff odds work</a>. <a href="/changes">What’s new</a>.</footer>
 </div>
 <script src="/model.js"></script>
 <script src="/app.js"></script>

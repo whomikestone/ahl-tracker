@@ -47,7 +47,7 @@
       <span><span class="full">${esc(t.name)}</span><span class="short">${esc(t.nickname || t.name)}</span>${showDiv ? ` <span class="div-tag">${esc(t.div)}</span>` : ""}</span><span class="chev" aria-hidden="true">▾</span></button></td>`;
   }
 
-  function streakCell(s) { return s ? `<span class="${s[0] === "W" ? "W" : s[0] === "L" ? "L" : ""}">${s}</span>` : "–"; }
+  function streakCell(s) { return s ? `<span class="${s.startsWith("W") ? "W" : s.startsWith("L") ? "L" : ""}">${s}</span>` : "–"; }
 
   const MOVE_KEY = { divRank: "dDiv", confRank: "dConf", leagueRank: "dLeague" };
 
@@ -66,19 +66,21 @@
       if (lines && t.divRank === t.byes && t.byes < list.length) line = "blue-line";
       if (lines && t.divRank === t.spots && t.spots < list.length) line = "red-line";
       const row = `<td class="rank">${t[rankKey]}</td><td class="mv">${state.week ? move(weekVal(t, MOVE_KEY[rankKey])) : ""}</td>${teamCell(t, showDiv)}
-        <td class="hide-xs">${t.gp}</td><td>${t.w}</td><td>${t.l}</td><td class="hide-sm">${t.otl}</td><td class="hide-sm">${t.sol}</td>
+        <td>${t.gp}</td><td>${t.w}</td><td>${t.l}</td><td>${t.otl}</td><td>${t.sol}</td>
         <td class="pts">${t.pts}</td><td>${t.gp ? pct(t.pct) : "–"}</td>
-        <td class="hide-sm">${signed(t.gd)}</td><td class="hide-sm">${t.gp ? t.l10 : "–"}</td><td class="hide-sm">${streakCell(t.streak)}</td>
+        <td>${t.rw}</td><td>${t.row}</td>
+        <td>${signed(t.gd)}</td><td>${t.gp ? t.l10 : "–"}</td><td>${streakCell(t.streak)}</td>
         <td>${oddsCell(o ? o.playoffs : 0)}</td>`;
-      return withDetail(t, row, 14, line);
+      return withDetail(t, row, 16, line);
     }).join("");
     return `<div class="scroll"><table>
       <thead><tr><th class="rank" scope="col">#</th><th class="mv" scope="col" title="Places moved during last week's games"><span class="sr">Change last week</span></th><th class="team" scope="col">Team</th>
-      <th class="hide-xs" scope="col" title="Games played">GP</th><th scope="col" title="Wins">W</th><th scope="col" title="Regulation losses">L</th>
-      <th class="hide-sm" scope="col" title="Overtime losses">OTL</th><th class="hide-sm" scope="col" title="Shootout losses">SOL</th>
+      <th scope="col" title="Games played">GP</th><th scope="col" title="Wins">W</th><th scope="col" title="Regulation losses">L</th>
+      <th scope="col" title="Overtime losses">OTL</th><th scope="col" title="Shootout losses">SOL</th>
       <th scope="col" title="Points">PTS</th><th scope="col" title="Points percentage (the AHL ranks by this)">PCT</th>
-      <th class="hide-sm" scope="col" title="Goal differential">GD</th><th class="hide-sm" scope="col" title="Last 10 games: W-L-OT">L10</th>
-      <th class="hide-sm" scope="col" title="Current streak">STK</th><th scope="col"><span class="hide-sm">Playoffs</span><span class="show-sm">Odds</span></th></tr></thead>
+      <th scope="col" title="Regulation wins (first tiebreaker)">RW</th><th scope="col" title="Regulation + overtime wins (second tiebreaker)">ROW</th>
+      <th scope="col" title="Goal differential">GD</th><th scope="col" title="Last 10 games: W-L-OTL-SOL">L10</th>
+      <th scope="col" title="Current streak">STK</th><th scope="col"><span class="wide-only">Playoffs</span><span class="narrow-only">Odds</span></th></tr></thead>
       <tbody>${rows}</tbody></table></div>`;
   }
 
@@ -86,7 +88,7 @@
     const home = g[1] === t.id;
     const opp = state.st.byId.get(home ? g[2] : g[1]);
     const us = home ? g[3] : g[4], them = home ? g[4] : g[3];
-    const res = us > them ? "W" : g[5] === 1 ? "L" : "OTL";
+    const res = us > them ? "W" : g[5] === 1 ? "L" : g[5] === 2 ? "OTL" : "SOL";
     const extra = g[5] === 2 ? " OT" : g[5] === 3 ? " SO" : "";
     return `<li><span class="${us > them ? "W" : "L"}">${res}</span> ${us}–${them}${extra} ${home ? "vs" : "at"} ${esc(opp.nickname || opp.name)} <span class="when">${day(g[0])}</span></li>`;
   }
@@ -95,7 +97,7 @@
     const w = state.week;
     if (!w) return `<div class="wk">Working out last week's changes…</div>`;
     const x = w.byId.get(t.id);
-    const rec = `${x.record[0]}-${x.record[1]}-${x.record[2]}`;
+    const rec = x.record.join("-"); // W-L-OTL-SOL
     const games = x.games.length ? `<ul class="wk-games">${x.games.map((g) => gameLine(t, g)).join("")}</ul>` : `<p class="wk-none">No games last week.</p>`;
     const cell = (label, rank, d) => `<div><b>${rank}</b> ${move(d)}<span>${label}</span></div>`;
     return `<div class="wk">
@@ -147,16 +149,16 @@
     const rows = list.map((t, i) => {
       const o = state.odds.byId.get(t.id);
       const row = `<td class="rank">${i + 1}</td><td class="mv">${state.week ? move(weekVal(t, "dOdds"), "pts") : ""}</td>${teamCell(t, true)}
-        <td>${t.w}-${t.l}-${t.otl + t.sol}</td><td class="hide-sm">${t.remaining}</td>
-        <td>${Math.round(o.projPts)}</td><td class="hide-sm">${pct(o.projPct)}</td>
-        <td class="hide-sm">${oddsCell(o.divTitle)}</td><td>${oddsCell(o.bye)}</td><td>${oddsCell(o.playoffs)}</td>`;
+        <td>${t.w}-${t.l}-${t.otl}-${t.sol}</td><td>${t.remaining}</td>
+        <td>${Math.round(o.projPts)}</td><td>${pct(o.projPct)}</td>
+        <td>${oddsCell(o.divTitle)}</td><td>${oddsCell(o.bye)}</td><td>${oddsCell(o.playoffs)}</td>`;
       return withDetail(t, row, 10, "");
     }).join("");
     return `<section class="group"><h3>Playoff odds <small>${state.odds.gamesLeft} games left to play</small></h3>${state.week ? `<div class="legend"><span class="arrows">Arrows show how much each team's playoff odds moved during last week's games (${weekRange(state.week)}), in percentage points.</span></div>` : ""}
       <div class="scroll"><table><thead><tr><th class="rank" scope="col">#</th><th class="mv" scope="col"><span class="sr">Odds change last week</span></th><th class="team" scope="col">Team</th>
-      <th scope="col" title="W-L-OT">Record</th><th class="hide-sm" scope="col">Games left</th>
-      <th scope="col" title="Projected final points">Proj PTS</th><th class="hide-sm" scope="col">Proj PCT</th>
-      <th class="hide-sm" scope="col">Win division</th><th scope="col" title="Skip the best-of-three first round">Bye</th><th scope="col">Make playoffs</th></tr></thead>
+      <th scope="col" title="W-L-OTL-SOL">Record</th><th scope="col">Games left</th>
+      <th scope="col" title="Projected final points">Proj PTS</th><th scope="col">Proj PCT</th>
+      <th scope="col">Win division</th><th scope="col" title="Skip the best-of-three first round">Bye</th><th scope="col">Make playoffs</th></tr></thead>
       <tbody>${rows}</tbody></table></div></section>`;
   }
 
@@ -372,8 +374,15 @@
   function render() {
     if (!state.st) return;
     const views = { division: renderDivision, conference: renderConference, league: renderLeague, odds: renderOdds, trends: renderTrends };
+    const scrollPos = [...document.querySelectorAll(".scroll")].map((el) => el.scrollLeft); // keep sideways scroll across redraws
     $("#main").innerHTML = (views[state.view] || renderDivision)();
+    document.querySelectorAll(".scroll").forEach((el, i) => { if (scrollPos[i]) el.scrollLeft = scrollPos[i]; });
     if (state.view === "trends") drawChart();
+    document.querySelectorAll(".scroll").forEach((el) => {
+      const mark = () => el.classList.toggle("scrolled", el.scrollLeft > 2);
+      el.addEventListener("scroll", mark, { passive: true });
+      mark();
+    });
     renderFav();
   }
 

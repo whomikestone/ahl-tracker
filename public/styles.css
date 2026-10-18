@@ -49,13 +49,14 @@ section.group { margin-bottom: 28px; }
 section.group h3 { font: 600 1.5rem/1.1 var(--display); margin: 0 0 8px; display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; }
 section.group h3 small { font: 400 0.85rem var(--body); color: var(--muted); }
 .scroll { overflow-x: auto; background: var(--surface); border-radius: 10px; }
-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 0.95rem; }
+table { width: 100%; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; font-size: 0.95rem; }
 th { font: 600 0.8rem var(--body); color: var(--muted); text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
 td { padding: 8px; text-align: right; border-bottom: 1px solid var(--rule); white-space: nowrap; }
 th.team, td.team { text-align: left; }
-th.rank, td.rank { text-align: center; width: 2.2em; color: var(--muted); }
+th.rank, td.rank { text-align: center; color: var(--muted); }
 tr:last-child td { border-bottom: 0; }
-td.team { font-weight: 600; min-width: 190px; }
+td.team { font-weight: 600; min-width: 170px; white-space: normal; line-height: 1.25; }
+th, td { padding-left: 6px; padding-right: 6px; }
 td.team .tn { display: flex; align-items: center; gap: 10px; }
 .logo { position: relative; width: 28px; height: 28px; flex: none; display: inline-block; }
 .logo .abbr { position: absolute; inset: 0; display: grid; place-items: center; border: 1.5px solid var(--muted); border-radius: 50%;
@@ -79,7 +80,7 @@ tr.red-line td { border-bottom: 4px solid var(--red); }
 .legend .arrows .up, .legend .arrows .down { margin-right: 2px; }
 
 /* Weekly movement arrows */
-th.mv, td.mv { text-align: left; width: 2.6em; padding-left: 0; padding-right: 4px; font-size: 0.82rem; font-weight: 600; }
+th.mv, td.mv { text-align: left; padding-left: 0; padding-right: 4px; font-size: 0.82rem; font-weight: 600; }
 .up { color: #1D8A4C; } .down { color: var(--red); } .mv-none { color: var(--muted); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
@@ -109,9 +110,6 @@ tr.detail td { text-align: left; white-space: normal; background: var(--ice); pa
 .bar i { display: block; height: 100%; background: var(--blue); }
 .odds.hi .bar i { background: #1D8A4C; } .odds.lo .bar i { background: var(--red); }
 
-@media (max-width: 640px) { .hide-sm, .chev { display: none; } table { font-size: 0.88rem; } th.mv, td.mv { width: 2.2em; font-size: 0.75rem; } th.rank, td.rank { width: 1.6em; } button.expand { gap: 6px; } td.team { min-width: 0; } td.team .logo { width: 24px; height: 24px; } td.team .logo .abbr { font-size: 0.55rem; } td.team .tn { gap: 6px; } th, td { padding: 8px 5px; } .bar { display: none; } .odds { min-width: 0; } .wrap { padding: 0 10px 48px; } td.team .full { display: none; } }
-@media (max-width: 400px) { .hide-xs { display: none; } th, td { padding: 8px 4px; } td.team .logo { width: 20px; height: 20px; } td.team .logo .abbr { font-size: 0.5rem; } }
-@media (min-width: 641px) { td.team .short, .show-sm { display: none; } }
 
 /* Trends chart */
 .trend-controls { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-bottom: 14px; }
@@ -126,6 +124,11 @@ tr.detail td { text-align: left; white-space: normal; background: var(--ice); pa
 .chart .cut-blue { stroke: var(--blue); stroke-width: 2; stroke-dasharray: 6 5; }
 .chart .cut-red { stroke: var(--red); stroke-width: 2.5; stroke-dasharray: 6 5; }
 .chart .half { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 3 4; }
+.chart .changelog { background: var(--surface); border-radius: 10px; padding: 4px 20px 16px; max-width: 75ch; }
+.changelog h2 { font: 600 1.5rem/1.2 var(--display); margin: 20px 0 6px; }
+.changelog ul { margin: 0; padding-left: 20px; }
+.changelog li { margin: 4px 0; }
+.changelog code { font-size: 0.9em; background: var(--ice); padding: 1px 4px; border-radius: 4px; }
 .chart .guide { stroke: var(--ink); stroke-width: 1; opacity: 0.35; }
 .chart .series .hit { stroke: transparent; stroke-width: 14; fill: none; cursor: pointer; }
 .chart .label { cursor: pointer; }
@@ -150,9 +153,45 @@ tr.detail td { text-align: left; white-space: normal; background: var(--ice); pa
 
 .note { color: var(--muted); font-size: 0.9rem; max-width: 70ch; }
 .note a { color: var(--blue); }
+.colguide { background: var(--surface); border-radius: 10px; margin: 8px 0 0; }
+.colguide summary { cursor: pointer; padding: 14px 16px; font: 600 1.1rem var(--display); }
+.colguide summary:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; border-radius: 10px; }
+.colguide-body { padding: 0 16px 16px; font-size: 0.92rem; max-width: 75ch; }
+.colguide-body p { margin: 0 0 12px; }
+.colguide dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0 0 12px; }
+.colguide dt { font-weight: 700; font-variant-numeric: tabular-nums; }
+.colguide dd { margin: 0; color: var(--muted); }
+.colguide .tag { display: inline-block; font-size: 0.75rem; font-weight: 600; color: var(--blue); border: 1px solid var(--blue); border-radius: 999px; padding: 0 7px; margin-left: 4px; }
 footer.site { color: var(--muted); font-size: 0.9rem; margin-top: 32px; }
 footer.site a { color: var(--blue); }
 .note h4 { font: 600 1.15rem var(--display); color: var(--ink); margin: 32px 0 4px; }
 .msg { background: var(--surface); padding: 24px; border-radius: 10px; }
 .msg.error { border-left: 6px solid var(--red); }
 @media (prefers-reduced-motion: no-preference) { .bar i { transition: width .5s ease-out; } }
+
+/* Scrollable tables: rank, movement arrow and team stay pinned on the left
+   while the stats scroll sideways. */
+th.rank, td.rank, th.mv, td.mv, th.team, td.team { position: sticky; z-index: 1; background: var(--surface); }
+th.rank, td.rank { left: 0; width: 34px; min-width: 34px; max-width: 34px; }
+th.mv, td.mv { left: 34px; width: 34px; min-width: 34px; max-width: 34px; }
+th.team, td.team { left: 68px; }
+th.rank, th.mv, th.team { z-index: 2; }
+tr.is-fav td.rank, tr.is-fav td.mv, tr.is-fav td.team { background: var(--fav); }
+.scroll.scrolled td.team, .scroll.scrolled th.team { box-shadow: 8px 0 8px -6px rgba(20, 30, 40, 0.28); }
+tr.detail td .wk { position: sticky; left: 16px; max-width: min(640px, calc(100vw - 64px)); }
+.narrow-only { display: none; }
+
+@media (max-width: 820px) {
+  .chev, .bar { display: none; }
+  .wide-only { display: none; } .narrow-only { display: inline; }
+  .odds { min-width: 0; }
+  table { font-size: 0.88rem; }
+  th, td { padding: 8px 5px; }
+  th.mv, td.mv { font-size: 0.75rem; }
+  td.team { min-width: 0; }
+  td.team .full { display: none; }
+  td.team .logo { width: 24px; height: 24px; } td.team .logo .abbr { font-size: 0.55rem; }
+  td.team .tn { gap: 6px; }
+  .wrap { padding: 0 10px 48px; }
+}
+@media (min-width: 821px) { td.team .short { display: none; } }
