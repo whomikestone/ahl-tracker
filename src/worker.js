@@ -4,6 +4,9 @@
 // - Serves that copy at /api/data. The page in ./public does the standings
 //   math and playoff simulation in the browser.
 
+import CHANGELOG from "../CHANGELOG.md";
+import { changesPage } from "./changelog.js";
+
 const FEED = "https://lscluster.hockeytech.com/feed/index.php";
 const PUBLIC_KEY = "50c2cd9b5e18e390"; // public key embedded in theahl.com
 const CLIENT = "ahl";
@@ -194,6 +197,11 @@ export default {
         }
       }
       return new Response(raw, { headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=300" } });
+    }
+
+    // "What's new" page, built from CHANGELOG.md
+    if (url.pathname === "/changes" || url.pathname === "/changes/") {
+      return new Response(changesPage(CHANGELOG), { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=300" } });
     }
 
     // Team logos, served from this site: /logo/<team id>

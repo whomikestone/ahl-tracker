@@ -38,9 +38,9 @@
       if (type === 1) { win.rw++; win.row++; lose.l++; lose.results.push({ date, r: "L" }); }
       else {
         if (type === 2) win.row++;
-        lose.pts += 1;
+        lose.pts += 1; // overtime and shootout losses earn a point
         type === 2 ? lose.otl++ : lose.sol++;
-        lose.results.push({ date, r: "OT" });
+        lose.results.push({ date, r: type === 2 ? "OTL" : "SOL" });
       }
       const hr = home.home, ar = away.away;
       if (homeWon) { hr[0]++; type === 1 ? ar[1]++ : ar[2]++; } else { ar[0]++; type === 1 ? hr[1]++ : hr[2]++; }
@@ -49,7 +49,8 @@
       t.pct = pctOf(t);
       t.gd = t.gf - t.ga;
       const last = t.results.slice(-10);
-      t.l10 = `${last.filter((x) => x.r === "W").length}-${last.filter((x) => x.r === "L").length}-${last.filter((x) => x.r === "OT").length}`;
+      const n10 = (r) => last.filter((x) => x.r === r).length;
+      t.l10 = `${n10("W")}-${n10("L")}-${n10("OTL")}-${n10("SOL")}`; // AHL style: W-L-OTL-SOL
       let n = 0; const lastR = t.results.length ? t.results[t.results.length - 1].r : null;
       for (let i = t.results.length - 1; i >= 0 && t.results[i].r === lastR; i--) n++;
       t.streak = lastR ? `${lastR}${n}` : "";
@@ -187,10 +188,10 @@
     for (const a of sA.teams) {
       const b = sB.byId.get(a.id);
       const games = data.games.filter((g) => g[5] && g[0] >= w.start && g[0] <= w.end && (g[1] === a.id || g[2] === a.id));
-      const rec = [0, 0, 0];
+      const rec = [0, 0, 0, 0]; // W-L-OTL-SOL
       for (const g of games) {
         const home = g[1] === a.id, won = home ? g[3] > g[4] : g[4] > g[3];
-        rec[won ? 0 : g[5] === 1 ? 1 : 2]++;
+        rec[won ? 0 : g[5] === 1 ? 1 : g[5] === 2 ? 2 : 3]++;
       }
       byId.set(a.id, {
         divRank: a.divRank, confRank: a.confRank, leagueRank: a.leagueRank,
@@ -199,7 +200,7 @@
         dLeague: ranked ? b.leagueRank - a.leagueRank : null,
         odds: oA.byId.get(a.id).playoffs,
         dOdds: oA.byId.get(a.id).playoffs - oB.byId.get(a.id).playoffs,
-        games, record: rec, pts: rec[0] * 2 + rec[2],
+        games, record: rec, pts: rec[0] * 2 + rec[2] + rec[3],
       });
     }
     return { ...w, byId, anyGames: data.games.some((g) => g[5] && g[0] >= w.start && g[0] <= w.end) };

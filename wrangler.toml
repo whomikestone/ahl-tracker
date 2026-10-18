@@ -2,7 +2,13 @@ name = "ahl-tracker"
 main = "src/worker.js"
 compatibility_date = "2026-09-01"
 
-# The web page (HTML, CSS, JS) lives in ./public and is served as static files.
+# Lets the worker import CHANGELOG.md as text for the "What's new" page.
+[[rules]]
+type = "Text"
+globs = ["**/*.md"]
+fallthrough = true
+
+# The web pages (HTML, CSS, JS) live in ./public and are served as static files.
 [assets]
 directory = "./public"
 binding = "ASSETS"

@@ -49,6 +49,12 @@ waiting until 3 a.m. After that, it updates nightly.
   this is unlikely on the free plan. If it happens, the $5/month Workers Paid plan
   removes the limit.
 
+## What's new page
+
+`CHANGELOG.md` is shown on the site at `/changes`, linked from the footer. To add an
+entry, put a new `## Month Day, Year` heading at the top with bullet points under it,
+then push. The page updates on the next deploy.
+
 ## Team logos
 
 Logos are downloaded from the AHL once, stored in your Cloudflare KV for a week,
@@ -74,4 +80,6 @@ and served from your own site at `/logo/<team id>`.
   `/conferences`, `/league`, `/odds`, and `/trends`. They're the `.html` files in
   `public/`; Cloudflare serves `conferences.html` at `/conferences`, and so on.
   They share `styles.css` for the look and `app.js` for filling in the content.
+  The "What's new" page at `/changes` is built by the worker from `CHANGELOG.md`
+  (see `src/changelog.js`).
   Your favorite team and chart settings are remembered across pages.
