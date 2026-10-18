@@ -17,6 +17,22 @@ merged to `main` goes straight to the live site.
 See `ROADMAP.md` for planned work, grouped by size. Start there when deciding what to
 build.
 
+## Decisions
+
+These choices are deliberate. Don't "fix" them without asking first.
+
+- **Ranking is by points percentage, not total points.** The AHL ranks teams this way
+  (points ÷ possible points), then breaks ties by RW, then ROW. That's why the order
+  can differ from sites like FloHockey, which sort by total points.
+- **Tables scroll sideways instead of hiding columns.** Every column shows on every
+  device; on phones, the rank, movement arrow, and team stay pinned on the left.
+- **Data updates once a day, at 3 a.m. Pacific, on purpose.** By then even late West
+  Coast games are final. Once a day is enough for following the standings, stays well
+  within Cloudflare's free plan, and keeps the load light on the AHL's unofficial
+  stats feed. Don't add more frequent or live updates.
+- **Playoff odds are simulated in the visitor's browser** (`public/model.js`), not in
+  the worker, so the nightly job stays well under the free plan's CPU limit.
+
 ## Working rules
 
 - **Push back honestly.** If an idea doesn't make sense, adds little, or conflicts with
