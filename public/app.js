@@ -22,13 +22,13 @@
     return a.getMonth() === b.getMonth() ? `${shortDay(w.start)}–${b.getDate()}` : `${shortDay(w.start)} – ${shortDay(w.end)}`;
   };
 
-  // Green up arrow / red down arrow with how many places a team moved last week.
+  // Green up arrow / red down arrow with how many places a team moved in the last 7 days.
   function move(d, unit = "") {
     if (d === null || d === undefined) return `<span class="mv-none" aria-label="No change data yet">·</span>`;
     const n = unit ? Math.round(d * 100) : d;
     if (n === 0) return `<span class="mv-none" aria-label="No change">–</span>`;
     const up = n > 0;
-    const label = unit ? `${up ? "Up" : "Down"} ${Math.abs(n)} percentage points last week` : `${up ? "Up" : "Down"} ${Math.abs(n)} last week`;
+    const label = unit ? `${up ? "Up" : "Down"} ${Math.abs(n)} percentage points in the last 7 days` : `${up ? "Up" : "Down"} ${Math.abs(n)} in the last 7 days`;
     return `<span class="${up ? "up" : "down"}" aria-label="${label}">${up ? "▲" : "▼"}${Math.abs(n)}</span>`;
   }
   const weekVal = (t, key) => (state.week ? state.week.byId.get(t.id)[key] : undefined);
@@ -43,7 +43,7 @@
 
   function teamCell(t, showDiv) {
     const open = state.open.has(t.id);
-    return `<td class="team"><button class="tn expand" data-team="${esc(t.id)}" aria-expanded="${open}" title="Show last week">${logoBox(t)}
+    return `<td class="team"><button class="tn expand" data-team="${esc(t.id)}" aria-expanded="${open}" title="Show the last 7 days">${logoBox(t)}
       <span><span class="full">${esc(t.name)}</span><span class="short">${esc(t.nickname || t.name)}</span>${showDiv ? ` <span class="div-tag">${esc(t.div)}</span>` : ""}</span><span class="chev" aria-hidden="true">▾</span></button></td>`;
   }
 
@@ -51,7 +51,7 @@
 
   const MOVE_KEY = { divRank: "dDiv", confRank: "dConf", leagueRank: "dLeague" };
 
-  // A row plus, when the team is expanded, its "last week" dropdown row.
+  // A row plus, when the team is expanded, its "last 7 days" dropdown row.
   // Rink lines move to the dropdown row so they still sit under the team.
   function withDetail(t, rowHtml, cols, lineCls) {
     const fav = t.id === state.fav ? "is-fav" : "";
@@ -74,7 +74,7 @@
       return withDetail(t, row, 16, line);
     }).join("");
     return `<div class="scroll"><table>
-      <thead><tr><th class="rank" scope="col">#</th><th class="mv" scope="col" title="Places moved during last week's games"><span class="sr">Change last week</span></th><th class="team" scope="col">Team</th>
+      <thead><tr><th class="rank" scope="col">#</th><th class="mv" scope="col" title="Places moved in the last 7 days"><span class="sr">Change in the last 7 days</span></th><th class="team" scope="col">Team</th>
       <th scope="col" title="Games played">GP</th><th scope="col" title="Wins">W</th><th scope="col" title="Regulation losses">L</th>
       <th scope="col" title="Overtime losses">OTL</th><th scope="col" title="Shootout losses">SOL</th>
       <th scope="col" title="Points">PTS</th><th scope="col" title="Points percentage (the AHL ranks by this)">PCT</th>
@@ -95,13 +95,13 @@
 
   function weekDetail(t) {
     const w = state.week;
-    if (!w) return `<div class="wk">Working out last week's changes…</div>`;
+    if (!w) return `<div class="wk">Working out the last 7 days…</div>`;
     const x = w.byId.get(t.id);
     const rec = x.record.join("-"); // W-L-OTL-SOL
-    const games = x.games.length ? `<ul class="wk-games">${x.games.map((g) => gameLine(t, g)).join("")}</ul>` : `<p class="wk-none">No games last week.</p>`;
+    const games = x.games.length ? `<ul class="wk-games">${x.games.map((g) => gameLine(t, g)).join("")}</ul>` : `<p class="wk-none">No games in the last 7 days.</p>`;
     const cell = (label, rank, d) => `<div><b>${rank}</b> ${move(d)}<span>${label}</span></div>`;
     return `<div class="wk">
-      <p class="wk-head">Week of ${weekRange(w)}${x.games.length ? `: <b>${rec}</b>, ${x.pts} point${x.pts === 1 ? "" : "s"}` : ""}</p>
+      <p class="wk-head">Last 7 days (${weekRange(w)})${x.games.length ? `: <b>${rec}</b>, ${x.pts} point${x.pts === 1 ? "" : "s"}` : ""}</p>
       ${games}
       <div class="wk-grid">
         ${cell("Division rank", ord(x.divRank), x.dDiv)}
@@ -109,7 +109,7 @@
         ${cell("League rank", ord(x.leagueRank), x.dLeague)}
         <div><b>${Math.round(x.odds * 100)}%</b> ${move(x.dOdds, "pts")}<span>Playoff odds</span></div>
       </div>
-      ${x.dDiv === null ? `<p class="wk-none">Rank changes start after the first full week of the season.</p>` : ""}
+      ${x.dDiv === null ? `<p class="wk-none">Rank changes start a week after opening night.</p>` : ""}
     </div>`;
   }
 
@@ -117,7 +117,7 @@
   const CONF_ORDER = ["Eastern", "Western"];
   const sortKeys = (obj, order) => Object.keys(obj).sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99));
 
-  const weekLegend = () => state.week ? `<span class="arrows"><span class="up">▲</span><span class="down">▼</span> Places moved during last week's games (${weekRange(state.week)}). Tap a team for details.</span>` : "";
+  const weekLegend = () => state.week ? `<span class="arrows"><span class="up">▲</span><span class="down">▼</span> Places moved in the last 7 days (${weekRange(state.week)}). Tap a team for details.</span>` : "";
 
   function renderDivision() {
     const { divisions, conferences } = state.st;
@@ -154,8 +154,8 @@
         <td>${oddsCell(o.divTitle)}</td><td>${oddsCell(o.bye)}</td><td>${oddsCell(o.playoffs)}</td>`;
       return withDetail(t, row, 10, "");
     }).join("");
-    return `<section class="group"><h3>Playoff odds <small>${state.odds.gamesLeft} games left to play</small></h3>${state.week ? `<div class="legend"><span class="arrows">Arrows show how much each team's playoff odds moved during last week's games (${weekRange(state.week)}), in percentage points.</span></div>` : ""}
-      <div class="scroll"><table><thead><tr><th class="rank" scope="col">#</th><th class="mv" scope="col"><span class="sr">Odds change last week</span></th><th class="team" scope="col">Team</th>
+    return `<section class="group"><h3>Playoff odds <small>${state.odds.gamesLeft} games left to play</small></h3>${state.week ? `<div class="legend"><span class="arrows">Arrows show how much each team's playoff odds moved in the last 7 days (${weekRange(state.week)}), in percentage points.</span></div>` : ""}
+      <div class="scroll"><table><thead><tr><th class="rank" scope="col">#</th><th class="mv" scope="col"><span class="sr">Odds change in the last 7 days</span></th><th class="team" scope="col">Team</th>
       <th scope="col" title="W-L-OTL-SOL">Record</th><th scope="col">Games left</th>
       <th scope="col" title="Projected final points">Proj PTS</th><th scope="col">Proj PCT</th>
       <th scope="col">Win division</th><th scope="col" title="Skip the best-of-three first round">Bye</th><th scope="col">Make playoffs</th></tr></thead>
@@ -364,7 +364,7 @@
         <div class="stat"><b>${t.pts}</b><span>Points</span></div>
         <div class="stat"><b>${t.gp ? pct(t.pct) : "–"}</b><span>Points %</span></div>
         <div class="stat"><b>${odds}</b><span>Playoff odds</span></div>
-        ${state.week ? (() => { const x = state.week.byId.get(t.id); return `<div class="stat"><b>${x.games.length ? `${x.record.join("-")}` : "Off"} <span class="fav-mv">${move(x.dDiv)}</span></b><span>Last week</span></div>`; })() : ""}
+        ${state.week ? (() => { const x = state.week.byId.get(t.id); return `<div class="stat"><b>${x.games.length ? `${x.record.join("-")}` : "Off"} <span class="fav-mv">${move(x.dDiv)}</span></b><span>Last 7 days</span></div>`; })() : ""}
         <div class="stat wide"><b style="font-size:1.1rem">${last ? describe(last) : "No games yet"}</b><span>Last game</span></div>
         <div class="stat wide"><b style="font-size:1.1rem">${next ? describe(next) : "Season complete"}</b><span>Next game</span></div>
       </div>`;

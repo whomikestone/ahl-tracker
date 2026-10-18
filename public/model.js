@@ -161,17 +161,23 @@
   }
 
   // ---- Weekly movement ----
-  // A "week" is Monday to Sunday, matching the AHL's weekend-heavy schedule.
-  // We rebuild the standings as they stood after each of the last two Sundays
-  // from the game results, so no separate weekly snapshot needs to be stored.
+  // Arrows and dropdowns cover the last 7 days, ending with the last fully
+  // finished day, so they always include last night's games and match the
+  // table. We rebuild the standings as they stood 7 days earlier from the
+  // game results, so no separate snapshot needs to be stored.
   const pacificDate = (iso) =>
     new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
   const addDays = (s, n) => { const d = new Date(`${s}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 
   function lastWeek(updatedAt) {
-    const yesterday = addDays(pacificDate(updatedAt), -1); // last fully finished day
-    const end = addDays(yesterday, -new Date(`${yesterday}T00:00:00Z`).getUTCDay()); // most recent Sunday
+    const end = addDays(pacificDate(updatedAt), -1); // last fully finished day
     return { start: addDays(end, -6), end, prevEnd: addDays(end, -7) };
+  }
+
+  // Most recent finished Sunday, for the trend chart's Monday-to-Sunday weeks.
+  function lastSunday(updatedAt) {
+    const yesterday = addDays(pacificDate(updatedAt), -1);
+    return addDays(yesterday, -new Date(`${yesterday}T00:00:00Z`).getUTCDay());
   }
 
   function asOf(data, cutoff) {
@@ -213,7 +219,7 @@
     if (!data.games.length) return [];
     const first = data.games[0][0];
     const firstMonday = addDays(first, -((new Date(`${first}T00:00:00Z`).getUTCDay() + 6) % 7));
-    const lastEnd = lastWeek(data.updatedAt).end;
+    const lastEnd = lastSunday(data.updatedAt);
     const weeks = [];
     for (let start = firstMonday, n = 1; addDays(start, 6) <= lastEnd; start = addDays(start, 7), n++) {
       const end = addDays(start, 6);

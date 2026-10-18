@@ -1,5 +1,8 @@
 # What's new
 
+## October 18, 2026
+- The movement arrows and each team's dropdown now cover the last 7 days, through last night's games. Before, they only updated on Mondays, so by the weekend they could be almost two weeks out of date and disagree with the table. The Trends chart still adds one point per finished week, every Monday.
+
 ## October 17, 2026
 - Added RW (regulation wins) and ROW (regulation and overtime wins) columns. They're the AHL's first tiebreakers, so they explain the order of tied teams.
 - Records now use the AHL's four-number format everywhere: W-L-OTL-SOL.
