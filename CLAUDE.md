@@ -41,6 +41,9 @@ These choices are deliberate. Don't "fix" them without asking first.
 - **Keep it simple.** The site should stay easy to use and easy to maintain. Prefer
   small changes to existing pages over new pages, menu items, settings, or
   dependencies. If a feature would make the site cumbersome, propose a lighter version.
+- **No attribution in commits or pull requests.** Don't add Co-Authored-By,
+  Claude-Session, "Generated with Claude Code", or any other attribution lines. Just a
+  plain description of the change.
 - **With every change:**
   - Add an entry to `CHANGELOG.md`, newest entry at the top, under a dated heading
     (e.g. `## October 18, 2026`). Write it in plain English for site visitors.
