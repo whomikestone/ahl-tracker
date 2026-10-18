@@ -29,6 +29,8 @@ Small changes, mostly a few lines each.
 - [x] In team dropdowns, label shootout losses "SOL" instead of "OTL"
 - [x] Team dropdowns show this week's games so far (through last night) above last week's
       summary; arrows and ranks stay weekly
+- [x] Playoff odds rebuilt on schedule- and home-adjusted goal differential, with a realistic home
+      edge and this season's OT and shootout rates; odds arrows no longer move from simulation noise
 - [x] Change log: a `CHANGELOG.md` in the repo, shown on a small "What's new" page linked
       from the footer (not the menu)
 

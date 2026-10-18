@@ -2,6 +2,8 @@
 
 ## October 18, 2026
 - Tapping a team now also shows this week's games so far, through last night, above last week's summary. The arrows and ranks still update once a week, on Monday mornings.
+- Rebuilt the playoff odds. Team strength now comes from goal differential (adjusted for home ice and opponents) instead of points percentage, home teams get a realistic edge, and overtime and shootout rates follow this season's real numbers. In testing on thousands of simulated seasons, the new odds were more accurate at every point of the season.
+- The weekly playoff-odds arrows are steadier: a team's odds now move only when results actually change its outlook, not from random variation in the simulation.
 
 ## October 17, 2026
 - Added RW (regulation wins) and ROW (regulation and overtime wins) columns. They're the AHL's first tiebreakers, so they explain the order of tied teams.

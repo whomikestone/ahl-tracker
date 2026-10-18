@@ -86,50 +86,112 @@
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
   }
+  // A fixed random number in [0, 1) for a given game, simulation and purpose.
+  function draw(u, n) {
+    let x = u ^ Math.imul(n, 0x27d4eb2f);
+    x ^= x >>> 16; x = Math.imul(x, 0x7feb352d); x ^= x >>> 15; x = Math.imul(x, 0x846ca68b); x ^= x >>> 16;
+    return (x >>> 0) / 4294967296;
+  }
   function hashString(s) { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; }
 
+  // ---- Team ratings ----
+  // A team's strength is measured in goals per game better or worse than an average
+  // team. Goal differential predicts future results better than points, because
+  // one-goal, overtime and shootout results are mostly luck. Each team's rating:
+  //  - counts shootouts as ties (the shootout "goal" isn't a real goal),
+  //  - removes home ice, so a home-heavy start doesn't inflate a team,
+  //  - adjusts for opponents, so beating good teams counts for more,
+  //  - is pulled toward average, strongly early on. Hockey is luck-heavy: after
+  //    RATING_PRIOR games, a team's own results and the league average count equally.
+  // Every simulated season draws each team's true strength around its rating, with a
+  // spread that narrows as games are played, so early-season odds stay modest.
+  const TRUE_SPREAD = 0.35; // goals/game: how far real AHL teams' strength usually ranges
+  const GAME_NOISE = 6; // variance of a single game's goal differential
+  const RATING_PRIOR = GAME_NOISE / TRUE_SPREAD ** 2; // about 49 games
+  const HOME_GOALS = 0.2; // home ice, in goals per game (home teams win about 53%)
+  const WIN_SLOPE = 0.65; // each goal per game of edge is worth about 16 points of win %
+
+  function ratings(data, teams) {
+    const idx = new Map(teams.map((t, i) => [t.id, i]));
+    const N = teams.length;
+    const gd = new Float64Array(N), n = new Float64Array(N), opps = teams.map(() => []);
+    for (const [, h, a, hg, ag, type] of data.games) {
+      if (!type) continue;
+      const i = idx.get(h), j = idx.get(a);
+      const d = (type === 3 ? 0 : hg - ag) - HOME_GOALS;
+      gd[i] += d; gd[j] -= d; n[i]++; n[j]++;
+      opps[i].push(j); opps[j].push(i);
+    }
+    let r = new Float64Array(N);
+    for (let pass = 0; pass < 20; pass++) {
+      const next = new Float64Array(N);
+      for (let i = 0; i < N; i++) {
+        let sos = 0;
+        for (const j of opps[i]) sos += r[j];
+        next[i] = (gd[i] + sos) / (n[i] + RATING_PRIOR); // schedule-adjusted, pulled toward 0
+      }
+      r = next;
+    }
+    const sd = teams.map((_, i) => Math.sqrt(1 / (1 / TRUE_SPREAD ** 2 + n[i] / GAME_NOISE)));
+    return { mean: r, sd };
+  }
+
+  // How often games go past regulation, and how often those reach a shootout:
+  // the league's own numbers this season, blended with typical values until
+  // enough games are in.
+  function overtimeRates(data) {
+    let done = 0, ot = 0, so = 0;
+    for (const g of data.games) if (g[5]) { done++; if (g[5] > 1) ot++; if (g[5] === 3) so++; }
+    return { tie: (ot + 0.23 * 300) / (done + 300), so: (so + 0.4 * 100) / (ot + 100) };
+  }
+
   // Monte Carlo: play out every remaining game many times.
-  // Team strength = points % so far, pulled toward .500 (heavily early in the season),
-  // plus random variation each simulated season that narrows as more games are played.
-  function simulate(data, standings, sims = 5000) {
+  // `seed` lets two runs share their random draws (see weekly), so the difference
+  // between them reflects the games played, not simulation noise.
+  function simulate(data, standings, sims = 5000, seed = data.updatedAt || "x") {
     const teams = standings.teams;
     const idx = new Map(teams.map((t, i) => [t.id, i]));
     const N = teams.length;
-    const PRIOR_GAMES = 30, SCALE = 0.85, HOME_EDGE = 0.07, SPREAD = 0.32, OT_RATE = 0.23, SO_SHARE = 0.4;
+    const R = ratings(data, teams), OT = overtimeRates(data);
+    // Who wins once a game reaches overtime or a shootout: still favors the
+    // better team, but much closer to a coin flip (a shootout almost entirely).
+    const OT_EDGE = 0.5, SO_EDGE = 0.15;
 
-    const base = teams.map((t) => {
-      const adj = (t.pts + PRIOR_GAMES) / (2 * (t.gp + PRIOR_GAMES));
-      return SCALE * Math.log(adj / (1 - adj));
-    });
-    // Uncertainty about each team's true strength shrinks as games are played.
-    const noise = teams.map((t) => SPREAD * Math.sqrt(PRIOR_GAMES / (PRIOR_GAMES + t.gp)));
-    const remaining = data.games.filter((g) => !g[5]).map((g) => [idx.get(g[1]), idx.get(g[2])]);
+    // Each game keeps its place in the schedule (k), which fixes its random draws.
+    const remaining = [];
+    data.games.forEach((g, k) => { if (!g[5]) remaining.push([idx.get(g[1]), idx.get(g[2]), Math.imul(k, 0x85ebca6b)]); });
     const divGroups = {};
     teams.forEach((t, i) => (divGroups[t.div] ||= []).push(i));
 
     const out = teams.map(() => ({ playoffs: 0, bye: 0, divTitle: 0, pts: 0, presidents: 0 }));
-    const rng = mulberry32(hashString(data.updatedAt || "x"));
+    const seed0 = hashString(seed);
+    let rng;
     const gauss = () => Math.sqrt(-2 * Math.log(rng() || 1e-12)) * Math.cos(2 * Math.PI * rng());
 
     const pts = new Float64Array(N), gp = new Float64Array(N), rw = new Float64Array(N), row = new Float64Array(N), tie = new Float64Array(N), r = new Float64Array(N);
     const sortKey = (i, j) => pts[j] / (2 * gp[j] || 1) - pts[i] / (2 * gp[i] || 1) || rw[j] - rw[i] || row[j] - row[i] || tie[j] - tie[i];
 
     for (let s = 0; s < sims; s++) {
+      const simSeed = seed0 + Math.imul(s, 0x9e3779b9);
+      rng = mulberry32(simSeed);
       for (let i = 0; i < N; i++) {
         const t = teams[i];
         pts[i] = t.pts; gp[i] = t.gp; rw[i] = t.rw; row[i] = t.row; tie[i] = rng();
-        r[i] = base[i] + noise[i] * gauss();
+        r[i] = R.mean[i] + R.sd[i] * gauss(); // this simulated season's true strength
       }
-      for (const [h, a] of remaining) {
-        const p = 1 / (1 + Math.exp(-(r[h] - r[a] + HOME_EDGE)));
+      for (const [h, a, k] of remaining) {
+        const u = simSeed ^ k;
+        const p = 1 / (1 + Math.exp(-WIN_SLOPE * (r[h] - r[a] + HOME_GOALS))); // home team's chance to win
         gp[h]++; gp[a]++;
-        if (rng() < OT_RATE) {
-          const so = rng() < SO_SHARE;
-          const homeWins = rng() < 0.5 + (p - 0.5) * (so ? 0.2 : 0.5);
+        const pastReg = OT.so * (0.5 + SO_EDGE * (p - 0.5)) + (1 - OT.so) * (0.5 + OT_EDGE * (p - 0.5)); // home wins past regulation
+        const regWin = Math.min(1, Math.max(0, (p - OT.tie * pastReg) / (1 - OT.tie))); // home wins in regulation, given no tie
+        if (draw(u, 1) < OT.tie) {
+          const isSO = draw(u, 2) < OT.so;
+          const homeWins = draw(u, 3) < 0.5 + (p - 0.5) * (isSO ? SO_EDGE : OT_EDGE);
           const [w, l] = homeWins ? [h, a] : [a, h];
-          pts[w] += 2; pts[l] += 1; if (!so) row[w]++;
+          pts[w] += 2; pts[l] += 1; if (!isSO) row[w]++;
         } else {
-          const w = rng() < p ? h : a;
+          const w = draw(u, 3) < regWin ? h : a;
           pts[w] += 2; rw[w]++; row[w]++;
         }
       }
@@ -192,7 +254,7 @@
     const w = lastWeek(data.updatedAt);
     const A = asOf(data, w.end), B = asOf(data, w.prevEnd);
     const sA = computeStandings(A), sB = computeStandings(B);
-    const oA = simulate(A, sA, sims), oB = simulate(B, sB, sims);
+    const oA = simulate(A, sA, sims, data.updatedAt), oB = simulate(B, sB, sims, data.updatedAt);
     const ranked = B.games.some((g) => g[5]); // before opening weekend there's no "previous rank"
     const byId = new Map();
     for (const a of sA.teams) {
@@ -236,5 +298,5 @@
     return simulate(week.data, week.st, sims).byId;
   }
 
-  root.AHL = { computeStandings, simulate, weekly, lastWeek, weekSeries, weekOdds, PLAYOFF_RULES, rulesFor };
+  root.AHL = { computeStandings, simulate, ratings, weekly, lastWeek, weekSeries, weekOdds, PLAYOFF_RULES, rulesFor };
 })(typeof window !== "undefined" ? window : globalThis);
