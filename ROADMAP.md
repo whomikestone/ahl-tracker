@@ -27,8 +27,8 @@ Small changes, mostly a few lines each.
       three-number W-L-OT on the odds page, last-week records, and L10. Overtime and shootout
       losses each earn a point, so they should be visible separately
 - [x] In team dropdowns, label shootout losses "SOL" instead of "OTL"
-- [x] Movement arrows and team dropdowns cover the last 7 days through last night, instead
-      of only updating on Mondays
+- [x] Team dropdowns show this week's games so far (through last night) above last week's
+      summary; arrows and ranks stay weekly
 - [x] Change log: a `CHANGELOG.md` in the repo, shown on a small "What's new" page linked
       from the footer (not the menu)
 

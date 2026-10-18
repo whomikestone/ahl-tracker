@@ -161,28 +161,32 @@
   }
 
   // ---- Weekly movement ----
-  // Arrows and dropdowns cover the last 7 days, ending with the last fully
-  // finished day, so they always include last night's games and match the
-  // table. We rebuild the standings as they stood 7 days earlier from the
-  // game results, so no separate snapshot needs to be stored.
+  // A "week" is Monday to Sunday, matching the AHL's weekend-heavy schedule.
+  // We rebuild the standings as they stood after each of the last two Sundays
+  // from the game results, so no separate weekly snapshot needs to be stored.
   const pacificDate = (iso) =>
     new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
   const addDays = (s, n) => { const d = new Date(`${s}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 
   function lastWeek(updatedAt) {
-    const end = addDays(pacificDate(updatedAt), -1); // last fully finished day
+    const yesterday = addDays(pacificDate(updatedAt), -1); // last fully finished day
+    const end = addDays(yesterday, -new Date(`${yesterday}T00:00:00Z`).getUTCDay()); // most recent Sunday
     return { start: addDays(end, -6), end, prevEnd: addDays(end, -7) };
-  }
-
-  // Most recent finished Sunday, for the trend chart's Monday-to-Sunday weeks.
-  function lastSunday(updatedAt) {
-    const yesterday = addDays(pacificDate(updatedAt), -1);
-    return addDays(yesterday, -new Date(`${yesterday}T00:00:00Z`).getUTCDay());
   }
 
   function asOf(data, cutoff) {
     return { ...data, updatedAt: cutoff, games: data.games.map((g) => (g[5] && g[0] <= cutoff ? g : [g[0], g[1], g[2], null, null, 0])) };
   }
+
+  function record(id, games) {
+    const rec = [0, 0, 0, 0]; // W-L-OTL-SOL
+    for (const g of games) {
+      const home = g[1] === id, won = home ? g[3] > g[4] : g[4] > g[3];
+      rec[won ? 0 : g[5] === 1 ? 1 : g[5] === 2 ? 2 : 3]++;
+    }
+    return rec;
+  }
+  const points = (rec) => rec[0] * 2 + rec[2] + rec[3];
 
   function weekly(data, sims = 2000) {
     const w = lastWeek(data.updatedAt);
@@ -193,12 +197,10 @@
     const byId = new Map();
     for (const a of sA.teams) {
       const b = sB.byId.get(a.id);
-      const games = data.games.filter((g) => g[5] && g[0] >= w.start && g[0] <= w.end && (g[1] === a.id || g[2] === a.id));
-      const rec = [0, 0, 0, 0]; // W-L-OTL-SOL
-      for (const g of games) {
-        const home = g[1] === a.id, won = home ? g[3] > g[4] : g[4] > g[3];
-        rec[won ? 0 : g[5] === 1 ? 1 : g[5] === 2 ? 2 : 3]++;
-      }
+      const mine = data.games.filter((g) => g[5] && (g[1] === a.id || g[2] === a.id));
+      const games = mine.filter((g) => g[0] >= w.start && g[0] <= w.end);
+      const since = mine.filter((g) => g[0] > w.end); // this week so far, through last night
+      const rec = record(a.id, games), recSince = record(a.id, since);
       byId.set(a.id, {
         divRank: a.divRank, confRank: a.confRank, leagueRank: a.leagueRank,
         dDiv: ranked ? b.divRank - a.divRank : null,
@@ -206,7 +208,8 @@
         dLeague: ranked ? b.leagueRank - a.leagueRank : null,
         odds: oA.byId.get(a.id).playoffs,
         dOdds: oA.byId.get(a.id).playoffs - oB.byId.get(a.id).playoffs,
-        games, record: rec, pts: rec[0] * 2 + rec[2] + rec[3],
+        games, record: rec, pts: points(rec),
+        since, sinceRecord: recSince, sincePts: points(recSince),
       });
     }
     return { ...w, byId, anyGames: data.games.some((g) => g[5] && g[0] >= w.start && g[0] <= w.end) };
@@ -219,7 +222,7 @@
     if (!data.games.length) return [];
     const first = data.games[0][0];
     const firstMonday = addDays(first, -((new Date(`${first}T00:00:00Z`).getUTCDay() + 6) % 7));
-    const lastEnd = lastSunday(data.updatedAt);
+    const lastEnd = lastWeek(data.updatedAt).end;
     const weeks = [];
     for (let start = firstMonday, n = 1; addDays(start, 6) <= lastEnd; start = addDays(start, 7), n++) {
       const end = addDays(start, 6);
