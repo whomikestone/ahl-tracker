@@ -104,6 +104,17 @@ tr.detail td { text-align: left; white-space: normal; background: var(--ice); pa
 .wk-grid .up, .wk-grid .down, .wk-grid .mv-none { font-size: 0.9rem; font-weight: 600; margin-left: 4px; }
 .wk-none { color: var(--muted); font-size: 0.9rem; }
 .fav-mv { font-size: 1rem; }
+.wk .wk-next { margin-top: 12px; }
+.wk-next .when { color: var(--muted); font-size: 0.85rem; }
+a.more { color: var(--blue); font-weight: 600; text-decoration: none; }
+a.more:hover { text-decoration: underline; text-underline-offset: 3px; }
+.fav a.more { grid-column: 1 / -1; margin-top: 4px; }
+
+/* Team page: results and remaining schedule */
+table.games th.date, table.games td.date, table.games th.opp, table.games td.opp, table.games .res { text-align: left; }
+table.games td.opp a { display: inline-flex; align-items: center; gap: 8px; color: inherit; text-decoration: none; font-weight: 600; }
+table.games td.opp a:hover span { text-decoration: underline; text-underline-offset: 3px; }
+table.games td.res { font-weight: 700; }
 
 .odds { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; min-width: 96px; }
 .bar { width: 48px; height: 6px; background: var(--crease); border-radius: 3px; overflow: hidden; }

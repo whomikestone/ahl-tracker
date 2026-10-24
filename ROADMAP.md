@@ -33,11 +33,12 @@ Small changes, mostly a few lines each.
 ## Milestone 2: Medium
 New pages or new calculations, built on data the app already has.
 
-- [ ] Team pages at `/team/<team-name>`, reached by tapping a team (no new menu items)
-- [ ] Team page: full schedule, with results so far and remaining games, home or away
-- [ ] Team page: home and road records, as a line or two
+- [x] Team pages at `/team/<team-name>`, reached by tapping a team or from the
+      team card above the tables (no new menu items); points earned in each game shown
+- [x] Team page: full schedule, with results so far and remaining games, home or away
+- [x] Team page: home and road records, as a line or two
 - [ ] Team page: the team's own week-by-week chart
-- [ ] Team dropdown: next three games and a "Full schedule" link (needs team pages)
+- [x] Team dropdown: next three games and a "Full schedule" link (needs team pages)
 - [ ] Strength of schedule on team pages: how tough the remaining opponents are
 - [ ] Finishing-position chart: each team's chance of finishing 1st, 2nd, 3rd, and so on in
       its division, as a shaded grid (also covers likely first-round matchups)

@@ -9,13 +9,26 @@
   const pct = (x) => x.toFixed(3).replace(/^0/, "");
   const signed = (n) => (n > 0 ? `+${n}` : String(n));
   const day = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  // Team page addresses: /team/hershey-bears
+  const slug = (t) => t.name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const teamUrl = (t) => `/team/${slug(t)}`;
+  const teamGames = (id) => state.data.games.filter((g) => g[1] === id || g[2] === id);
+  // One game from a team's side: opponent, score, and result (W, L, OTL or SOL).
+  function result(t, g) {
+    const home = g[1] === t.id;
+    const opp = state.st.byId.get(home ? g[2] : g[1]);
+    if (!g[5]) return { home, opp };
+    const us = home ? g[3] : g[4], them = home ? g[4] : g[3];
+    const res = us > them ? "W" : g[5] === 1 ? "L" : g[5] === 2 ? "OTL" : "SOL";
+    return { home, opp, us, them, res, extra: g[5] === 2 ? " OT" : g[5] === 3 ? " SO" : "" };
+  }
 
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch {} },
   };
 
-  const state = { data: null, st: null, odds: null, week: null, open: new Set(), view: document.body.dataset.view || "division", fav: store.get("fav") || "" };
+  const state = { data: null, st: null, odds: null, week: null, open: new Set(), view: document.body.dataset.view || "division", fav: store.get("fav") || "", teamId: "" };
   const shortDay = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const weekRange = (w) => {
     const [a, b] = [new Date(`${w.start}T12:00:00`), new Date(`${w.end}T12:00:00`)];
@@ -100,6 +113,10 @@
     const rec = x.record.join("-"); // W-L-OTL-SOL
     const games = x.games.length ? `<ul class="wk-games">${x.games.map((g) => gameLine(t, g)).join("")}</ul>` : `<p class="wk-none">No games last week.</p>`;
     const cell = (label, rank, d) => `<div><b>${rank}</b> ${move(d)}<span>${label}</span></div>`;
+    const next = teamGames(t.id).filter((g) => !g[5]).slice(0, 3).map((g) => {
+      const x = result(t, g);
+      return `${x.home ? "vs" : "at"} ${esc(x.opp.nickname || x.opp.name)} <span class="when">${shortDay(g[0])}</span>`;
+    });
     return `<div class="wk">
       <p class="wk-head">Week of ${weekRange(w)}${x.games.length ? `: <b>${rec}</b>, ${x.pts} point${x.pts === 1 ? "" : "s"}` : ""}</p>
       ${games}
@@ -110,6 +127,8 @@
         <div><b>${Math.round(x.odds * 100)}%</b> ${move(x.dOdds, "pts")}<span>Playoff odds</span></div>
       </div>
       ${x.dDiv === null ? `<p class="wk-none">Rank changes start after the first full week of the season.</p>` : ""}
+      ${next.length ? `<p class="wk-next"><b>Next:</b> ${next.join(", ")}</p>` : ""}
+      <a class="more" href="${teamUrl(t)}">Full season and schedule →</a>
     </div>`;
   }
 
@@ -334,9 +353,34 @@
     });
   }
 
+  // ---- Team page: every game this season, plus what's left ----
+  function renderTeam() {
+    const t = state.teamId && state.st.byId.get(state.teamId);
+    if (!t) return `<div class="msg">Choose a team from the list above to see its season.</div>`;
+    const IDX = { W: 0, L: 1, OTL: 2, SOL: 3 };
+    const run = [0, 0, 0, 0], split = { home: [0, 0, 0, 0], away: [0, 0, 0, 0] };
+    const oppCell = (x) => `<td class="opp"><a href="${teamUrl(x.opp)}">${logoBox(x.opp)}<span>${x.home ? "vs" : "at"} ${esc(x.opp.nickname || x.opp.name)}</span></a></td>`;
+    const games = teamGames(t.id);
+    const played = games.filter((g) => g[5]).map((g) => {
+      const x = result(t, g);
+      run[IDX[x.res]]++; split[x.home ? "home" : "away"][IDX[x.res]]++;
+      const pts = x.res === "W" ? 2 : x.res === "L" ? 0 : 1;
+      return `<tr><td class="date">${day(g[0])}</td>${oppCell(x)}<td class="res"><span class="${x.res === "W" ? "W" : "L"}">${x.res}</span></td>
+        <td>${x.us}–${x.them}${x.extra}</td><td class="pts">${pts}</td><td>${run.join("-")}</td></tr>`;
+    }).reverse().join(""); // newest first
+    const left = games.filter((g) => !g[5]).map((g) => `<tr><td class="date">${day(g[0])}</td>${oppCell(result(t, g))}</tr>`).join("");
+    const head = (cols) => `<thead><tr>${cols.map(([label, cls, title]) => `<th scope="col" class="${cls || ""}"${title ? ` title="${title}"` : ""}>${label}</th>`).join("")}</tr></thead>`;
+    return `<section class="group"><h3>Results <small>Home ${split.home.join("-")}, road ${split.away.join("-")}</small></h3>
+      ${played ? `<div class="scroll"><table class="games">${head([["Date", "date"], ["Opponent", "opp"], ["Result", "res"], ["Score"], ["PTS", "", "Points earned"], ["Record", "", "Season record after this game: W-L-OTL-SOL"]])}<tbody>${played}</tbody></table></div>
+      <p class="note">Newest first. A win earns 2 points; an overtime (OTL) or shootout (SOL) loss still earns 1. Records are W-L-OTL-SOL.</p>` : `<div class="msg">No games played yet.</div>`}</section>
+      <section class="group"><h3>Still to play <small>${t.remaining} game${t.remaining === 1 ? "" : "s"}</small></h3>
+      ${left ? `<div class="scroll"><table class="games">${head([["Date", "date"], ["Opponent", "opp"]])}<tbody>${left}</tbody></table></div>` : `<div class="msg">Regular season complete.</div>`}</section>`;
+  }
+
   function renderFav() {
     const panel = $("#favPanel");
-    const t = state.fav && state.st && state.st.byId.get(state.fav);
+    const id = state.view === "team" ? state.teamId : state.fav;
+    const t = id && state.st && state.st.byId.get(id);
     if (!t) { panel.hidden = true; return; }
     const o = state.odds && state.odds.byId.get(t.id);
     const games = state.data.games;
@@ -367,13 +411,13 @@
         ${state.week ? (() => { const x = state.week.byId.get(t.id); return `<div class="stat"><b>${x.games.length ? `${x.record.join("-")}` : "Off"} <span class="fav-mv">${move(x.dDiv)}</span></b><span>Last week</span></div>`; })() : ""}
         <div class="stat wide"><b style="font-size:1.1rem">${last ? describe(last) : "No games yet"}</b><span>Last game</span></div>
         <div class="stat wide"><b style="font-size:1.1rem">${next ? describe(next) : "Season complete"}</b><span>Next game</span></div>
-      </div>`;
+      </div>${state.view === "team" ? "" : `<a class="more" href="${teamUrl(t)}">Full season and schedule →</a>`}`;
     panel.hidden = false;
   }
 
   function render() {
     if (!state.st) return;
-    const views = { division: renderDivision, conference: renderConference, league: renderLeague, odds: renderOdds, trends: renderTrends };
+    const views = { division: renderDivision, conference: renderConference, league: renderLeague, odds: renderOdds, trends: renderTrends, team: renderTeam };
     const scrollPos = [...document.querySelectorAll(".scroll")].map((el) => el.scrollLeft); // keep sideways scroll across redraws
     $("#main").innerHTML = (views[state.view] || renderDivision)();
     document.querySelectorAll(".scroll").forEach((el, i) => { if (scrollPos[i]) el.scrollLeft = scrollPos[i]; });
@@ -390,7 +434,8 @@
     const sel = $("#fav");
     const sorted = state.st.teams.slice().sort((a, b) => a.name.localeCompare(b.name));
     sel.innerHTML = `<option value="">Choose a team</option>` + sorted.map((t) => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join("");
-    sel.value = state.st.byId.has(state.fav) ? state.fav : "";
+    const id = state.view === "team" ? state.teamId : state.fav;
+    sel.value = state.st.byId.has(id) ? id : "";
   }
 
   $("#main").addEventListener("click", (e) => {
@@ -410,7 +455,11 @@
   });
   let resizeTimer;
   window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => state.view === "trends" && drawChart(), 150); });
-  $("#fav").addEventListener("change", (e) => { state.fav = e.target.value; store.set("fav", state.fav); render(); });
+  $("#fav").addEventListener("change", (e) => {
+    // On a team page the picker switches teams instead of setting your favorite.
+    if (state.view === "team") { const t = state.st.byId.get(e.target.value); if (t) location.href = teamUrl(t); return; }
+    state.fav = e.target.value; store.set("fav", state.fav); render();
+  });
 
   async function load() {
     try {
@@ -419,6 +468,12 @@
       if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
       state.data = data;
       state.st = AHL.computeStandings(data);
+      if (state.view === "team") {
+        const name = decodeURIComponent(location.pathname.split("/")[2] || "");
+        const t = state.st.teams.find((x) => slug(x) === name);
+        state.teamId = t ? t.id : "";
+        if (t) document.title = `${t.name}: AHL standings`;
+      }
       const when = new Date(data.updatedAt).toLocaleString(undefined, { timeZone: "America/Los_Angeles", weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
       $("#updated").textContent = `${data.season.name}. Updated ${when} Pacific.`;
       fillPicker();

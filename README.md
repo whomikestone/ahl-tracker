@@ -76,8 +76,11 @@ and served from your own site at `/logo/<team id>`.
 - `public/model.js` builds standings from game results and simulates the remaining
   season 5,000 times. Playoff spots per division are set in `PLAYOFF_RULES` at the
   top of that file; update them if the AHL changes its format.
-- The site has five pages, each with its own address: `/` (divisions),
-  `/conferences`, `/league`, `/odds`, and `/trends`. They're the `.html` files in
+- The site has five main pages, each with its own address: `/` (divisions),
+  `/conferences`, `/league`, `/odds`, and `/trends`, plus a page per team at
+  `/team/<team-name>` (like `/team/hershey-bears`). The worker serves `team.html`
+  for every team address, and `app.js` works out the team from the address.
+  They're the `.html` files in
   `public/`; Cloudflare serves `conferences.html` at `/conferences`, and so on.
   They share `styles.css` for the look and `app.js` for filling in the content.
   The "What's new" page at `/changes` is built by the worker from `CHANGELOG.md`

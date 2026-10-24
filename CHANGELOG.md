@@ -1,5 +1,9 @@
 # What's new
 
+## October 24, 2026
+- Added team pages. Pick a team from the "Your team" list and choose "Full season and schedule", or open a team's row in any table. Each page shows every game so far, newest first, with the score, the result (W, L, OTL or SOL), the points earned, and the season record after each game. It also lists the games still to play and the team's home and road records.
+- Tapping a team in a table now also shows its next three games.
+
 ## October 17, 2026
 - Added RW (regulation wins) and ROW (regulation and overtime wins) columns. They're the AHL's first tiebreakers, so they explain the order of tied teams.
 - Records now use the AHL's four-number format everywhere: W-L-OTL-SOL.

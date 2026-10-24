@@ -204,6 +204,9 @@ export default {
       return new Response(changesPage(CHANGELOG), { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=300" } });
     }
 
+    // Team pages: every /team/<team-name> address uses team.html; app.js picks the team from the address.
+    if (url.pathname.startsWith("/team/")) return env.ASSETS.fetch(new Request(new URL("/team", url), request));
+
     // Team logos, served from this site: /logo/<team id>
     if (url.pathname.startsWith("/logo/")) return serveLogo(env, ctx, decodeURIComponent(url.pathname.slice(6)));
 
