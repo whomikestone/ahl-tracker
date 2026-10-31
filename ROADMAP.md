@@ -38,6 +38,14 @@ New pages or new calculations, built on data the app already has.
 - [x] Team page: full schedule, with results so far and remaining games, home or away
 - [x] Team page: home and road records, as a line or two
 - [ ] Team page: the team's own week-by-week chart
+- [x] Team page: tap a game to see who scored, period by period (each game's details are
+      fetched from the feed once, the first time someone opens it, then kept for good)
+- [x] Puck-drop times for upcoming games, in the visitor's time zone
+- [ ] Check the goal details against the real feed once live: open a few finished games.
+      If they all say "not available", the feed's game summary format differs from what
+      `parseGoals` in `src/worker.js` expects and needs adjusting
+- [ ] Check the AHL game-page links (`theahl.com/stats/game-center/<game id>`) open the
+      right game
 - [x] Team dropdown: next three games and a "Full schedule" link (needs team pages)
 - [ ] Strength of schedule on team pages: how tough the remaining opponents are
 - [ ] Finishing-position chart: each team's chance of finishing 1st, 2nd, 3rd, and so on in
@@ -66,5 +74,6 @@ Tricky logic that needs careful testing.
       scoring leaders, changes almost daily, and the feed's support for it is unconfirmed (hard)
 
 ## Not doing
-- Scoring leaders: different data to fetch and maintain, and off the site's focus
+- Scoring leaders: different data to fetch and maintain, and off the site's focus.
+  (Per-game goal details on team pages are the exception; they're fetched once per game.)
 - Projected matchups as their own feature: covered by the finishing-position chart

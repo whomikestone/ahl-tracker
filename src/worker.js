@@ -89,19 +89,23 @@ async function refresh(env) {
   const ids = new Set(teams.map((t) => t.id));
 
   const rawGames = list(await feed(env, { view: "schedule", season_id: season.id }), "Schedule");
-  // Compact game rows: [date, homeId, awayId, homeGoals, awayGoals, type]
+  // Compact game rows: [date, homeId, awayId, homeGoals, awayGoals, type, gameId, start]
   // type: 0 = not played, 1 = regulation, 2 = overtime, 3 = shootout
+  // start: puck-drop time with its UTC offset, kept only for games not yet played.
   const games = rawGames
     .filter((g) => !/cancel/i.test(String(g.game_status || "")))
     .map((g) => {
       const type = gameType(g);
+      const iso = String(g.GameDateISO8601 || "");
       return [
-        String(g.date_played || g.GameDateISO8601 || "").slice(0, 10),
+        String(g.date_played || iso).slice(0, 10),
         String(g.home_team),
         String(g.visiting_team),
         type ? Number(g.home_goal_count) : null,
         type ? Number(g.visiting_goal_count) : null,
         type,
+        String(g.game_id || g.id || ""),
+        !type && /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(iso) ? iso : null,
       ];
     })
     .filter((g) => ids.has(g[1]) && ids.has(g[2]))
@@ -133,6 +137,72 @@ function pacific(date) {
   }).formatToParts(date);
   const get = (t) => parts.find((p) => p.type === t).value;
   return { day: `${get("year")}-${get("month")}-${get("day")}`, hour: Number(get("hour")), minute: Number(get("minute")) };
+}
+
+// ---- Goal-by-goal summaries ----
+// Fetched from the feed the first time someone opens a finished game, then kept
+// for good (finished games don't change), so each game is fetched at most once.
+// The feed's game summary format isn't documented, so this accepts the field names
+// HockeyTech is known to use and only keeps a summary whose goal count matches the
+// final score. Anything else shows visitors a link to the official game page instead.
+const SUMMARY_VERSION = 1;
+const flag = (v) => v === true || String(v) === "1";
+const person = (p) => (p && typeof p === "object" ? [p.first_name ?? p.firstName, p.last_name ?? p.lastName].filter(Boolean).join(" ") : "");
+
+function parseGoals(raw) {
+  const s = raw.Gamesummary || raw.GameSummary || raw;
+  let goals = s.goals;
+  if (!Array.isArray(goals) && Array.isArray(s.periods)) {
+    goals = s.periods.flatMap((p) => (Array.isArray(p.goals) ? p.goals.map((g) => ({ ...g, _period: p.info || p })) : []));
+  }
+  if (!Array.isArray(goals)) return null;
+  return goals.map((g) => {
+    const props = g.properties || {};
+    const assists = Array.isArray(g.assists) ? g.assists : [g.assist1_player, g.assist2_player];
+    return {
+      period: Number(g.period_id ?? (g.period && g.period.id) ?? (g._period && g._period.id)) || 0,
+      time: String(g.time || ""),
+      team: String(g.team_id ?? (g.team && g.team.id) ?? ""),
+      scorer: person(g.goal_scorer || g.scorer),
+      assists: assists.map(person).filter(Boolean),
+      pp: flag(g.power_play ?? props.isPowerPlay),
+      sh: flag(g.short_handed ?? props.isShortHanded),
+      en: flag(g.empty_net ?? props.isEmptyNet),
+      ps: flag(g.penalty_shot ?? props.isPenaltyShot),
+    };
+  });
+}
+
+async function serveGame(env, id) {
+  if (!/^\d+$/.test(id)) return json({ error: "Unknown game" }, 404);
+  const key = `game:v${SUMMARY_VERSION}:${id}`;
+  const cached = await env.DATA.get(key);
+  const hdr = { "Cache-Control": "public, max-age=86400" };
+  if (cached) return new Response(cached, { headers: { "Content-Type": "application/json", ...hdr } });
+
+  // Only finished games from this season's schedule, so the feed is never asked for anything else.
+  const miss = { "Cache-Control": "public, max-age=3600" };
+  if (await env.DATA.get(`${key}:miss`)) return json({ goals: null }, 200, miss); // tried within the last day
+
+  const data = JSON.parse((await env.DATA.get("data")) || "null");
+  const g = data && data.games.find((x) => x[6] === id);
+  if (!g || !g[5]) return json({ error: "Not a finished game" }, 404);
+  // Goals each team scored before any shootout (a shootout win adds one to the winner's score).
+  const so = g[5] === 3;
+  const expected = { [g[1]]: g[3] - (so && g[3] > g[4] ? 1 : 0), [g[2]]: g[4] - (so && g[4] > g[3] ? 1 : 0) };
+  for (const params of [{ view: "gamesummary", game_id: id }, { feed: "statviewfeed", view: "gameSummary", game_id: id }]) {
+    try {
+      let goals = parseGoals(await feed(env, params));
+      if (goals && g[5] === 3) goals = goals.filter((x) => x.period <= 4); // leave out shootout attempts
+      if (!goals || goals.some((x) => !x.scorer || !x.period || !(x.team in expected))) continue;
+      if ([g[1], g[2]].some((t) => goals.filter((x) => x.team === t).length !== expected[t])) continue;
+      const body = JSON.stringify({ goals });
+      await env.DATA.put(key, body);
+      return new Response(body, { headers: { "Content-Type": "application/json", ...hdr } });
+    } catch {}
+  }
+  await env.DATA.put(`${key}:miss`, "1", { expirationTtl: 86400 });
+  return json({ goals: null }, 200, miss);
 }
 
 // ---- Team logos ----
@@ -206,6 +276,9 @@ export default {
 
     // Team pages: every /team/<team-name> address uses team.html; app.js picks the team from the address.
     if (url.pathname.startsWith("/team/")) return env.ASSETS.fetch(new Request(new URL("/team", url), request));
+
+    // Who scored, period by period, for one finished game: /api/game/<game id>
+    if (url.pathname.startsWith("/api/game/")) return serveGame(env, decodeURIComponent(url.pathname.slice(10)));
 
     // Team logos, served from this site: /logo/<team id>
     if (url.pathname.startsWith("/logo/")) return serveLogo(env, ctx, decodeURIComponent(url.pathname.slice(6)));

@@ -35,6 +35,11 @@ waiting until 3 a.m. After that, it updates nightly.
 
 - `/api/status` shows when the last update ran and whether it worked.
 - `/api/refresh?token=YOUR_REFRESH_TOKEN` forces an update now.
+- `/api/game/<game id>` returns who scored in one finished game. The worker fetches it
+  from the stats feed the first time anyone opens that game on a team page and keeps
+  it for good, since finished games don't change. If the feed's answer can't be read
+  or doesn't match the final score, visitors get a link to the official game page, and
+  that game isn't retried for a day.
 
 ## If something goes wrong
 

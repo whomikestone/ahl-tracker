@@ -22,13 +22,18 @@
     const res = us > them ? "W" : g[5] === 1 ? "L" : g[5] === 2 ? "OTL" : "SOL";
     return { home, opp, us, them, res, extra: g[5] === 2 ? " OT" : g[5] === 3 ? " SO" : "" };
   }
+  // Puck-drop time in the visitor's own time zone, when the schedule has one.
+  const startTime = (g) => (g[7] && !/T00:00/.test(g[7]) ? new Date(g[7]).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", timeZoneName: "short" }) : "");
+  // Game date in the visitor's time zone too, so a late game doesn't land on the wrong day.
+  const gameDay = (g) => { if (!startTime(g)) return g[0]; const d = new Date(g[7]), z = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`; };
+  const when = (g, fmt = day) => (startTime(g) ? `${fmt(gameDay(g))}, ${startTime(g)}` : fmt(g[0]));
 
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch {} },
   };
 
-  const state = { data: null, st: null, odds: null, week: null, open: new Set(), view: document.body.dataset.view || "division", fav: store.get("fav") || "", teamId: "" };
+  const state = { data: null, st: null, odds: null, week: null, open: new Set(), view: document.body.dataset.view || "division", fav: store.get("fav") || "", teamId: "", openGames: new Set(), goals: new Map() };
   const shortDay = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const weekRange = (w) => {
     const [a, b] = [new Date(`${w.start}T12:00:00`), new Date(`${w.end}T12:00:00`)];
@@ -115,7 +120,7 @@
     const cell = (label, rank, d) => `<div><b>${rank}</b> ${move(d)}<span>${label}</span></div>`;
     const next = teamGames(t.id).filter((g) => !g[5]).slice(0, 3).map((g) => {
       const x = result(t, g);
-      return `${x.home ? "vs" : "at"} ${esc(x.opp.nickname || x.opp.name)} <span class="when">${shortDay(g[0])}</span>`;
+      return `${x.home ? "vs" : "at"} ${esc(x.opp.nickname || x.opp.name)} <span class="when">${when(g, shortDay)}</span>`;
     });
     return `<div class="wk">
       <p class="wk-head">Week of ${weekRange(w)}${x.games.length ? `: <b>${rec}</b>, ${x.pts} point${x.pts === 1 ? "" : "s"}` : ""}</p>
@@ -365,16 +370,51 @@
       const x = result(t, g);
       run[IDX[x.res]]++; split[x.home ? "home" : "away"][IDX[x.res]]++;
       const pts = x.res === "W" ? 2 : x.res === "L" ? 0 : 1;
-      return `<tr><td class="date">${day(g[0])}</td>${oppCell(x)}<td class="res"><span class="${x.res === "W" ? "W" : "L"}">${x.res}</span></td>
-        <td>${x.us}–${x.them}${x.extra}</td><td class="pts">${pts}</td><td>${run.join("-")}</td></tr>`;
+      const open = state.openGames.has(g[6]);
+      const score = `${x.us}–${x.them}${x.extra}`;
+      const row = `<tr class="${open ? "open" : ""}"><td class="date">${day(g[0])}</td>${oppCell(x)}<td class="res"><span class="${x.res === "W" ? "W" : "L"}">${x.res}</span></td>
+        <td>${g[6] ? `<button class="expand game" data-game="${esc(g[6])}" aria-expanded="${open}" title="Show who scored">${score} <span class="gchev" aria-hidden="true">▾</span></button>` : score}</td>
+        <td class="pts">${pts}</td><td>${run.join("-")}</td></tr>`;
+      return open ? `${row}<tr class="detail"><td colspan="6">${goalsDetail(g)}</td></tr>` : row;
     }).reverse().join(""); // newest first
-    const left = games.filter((g) => !g[5]).map((g) => `<tr><td class="date">${day(g[0])}</td>${oppCell(result(t, g))}</tr>`).join("");
+    const left = games.filter((g) => !g[5]).map((g) => `<tr><td class="date">${day(gameDay(g))}</td><td class="time">${startTime(g) || "–"}</td>${oppCell(result(t, g))}</tr>`).join("");
     const head = (cols) => `<thead><tr>${cols.map(([label, cls, title]) => `<th scope="col" class="${cls || ""}"${title ? ` title="${title}"` : ""}>${label}</th>`).join("")}</tr></thead>`;
     return `<section class="group"><h3>Results <small>Home ${split.home.join("-")}, road ${split.away.join("-")}</small></h3>
       ${played ? `<div class="scroll"><table class="games">${head([["Date", "date"], ["Opponent", "opp"], ["Result", "res"], ["Score"], ["PTS", "", "Points earned"], ["Record", "", "Season record after this game: W-L-OTL-SOL"]])}<tbody>${played}</tbody></table></div>
-      <p class="note">Newest first. A win earns 2 points; an overtime (OTL) or shootout (SOL) loss still earns 1. Records are W-L-OTL-SOL.</p>` : `<div class="msg">No games played yet.</div>`}</section>
+      <p class="note">Newest first. Tap a score to see who scored. A win earns 2 points; an overtime (OTL) or shootout (SOL) loss still earns 1. Records are W-L-OTL-SOL.</p>` : `<div class="msg">No games played yet.</div>`}</section>
       <section class="group"><h3>Still to play <small>${t.remaining} game${t.remaining === 1 ? "" : "s"}</small></h3>
-      ${left ? `<div class="scroll"><table class="games">${head([["Date", "date"], ["Opponent", "opp"]])}<tbody>${left}</tbody></table></div>` : `<div class="msg">Regular season complete.</div>`}</section>`;
+      ${left ? `<div class="scroll"><table class="games">${head([["Date", "date"], ["Time", "time", "Puck drop, in your time zone"], ["Opponent", "opp"]])}<tbody>${left}</tbody></table></div>` : `<div class="msg">Regular season complete.</div>`}</section>`;
+  }
+
+  // Goals for one finished game, loaded from /api/game/<id> the first time it's opened.
+  const PERIOD = ["", "1st period", "2nd period", "3rd period", "Overtime"];
+  function goalsDetail(g) {
+    const s = state.goals.get(g[6]);
+    if (!s) return `<div class="gs wk-none">Loading goals…</div>`;
+    const link = `<a class="more" href="https://theahl.com/stats/game-center/${encodeURIComponent(g[6])}" target="_blank" rel="noopener">Full game summary on theahl.com →</a>`;
+    if (!s.goals) return `<div class="gs"><p class="wk-none">Goal details aren't available for this game.</p>${link}</div>`;
+    const score = { [g[1]]: 0, [g[2]]: 0 };
+    let lastPeriod = 0;
+    const items = s.goals.map((x) => {
+      score[x.team]++;
+      const team = state.st.byId.get(x.team);
+      const tags = [x.pp && "PP", x.sh && "SH", x.en && "EN", x.ps && "PS"].filter(Boolean).map((k) => `<span class="gtag">${k}</span>`).join("");
+      const head = x.period !== lastPeriod ? `<li class="gper">${PERIOD[x.period] || `Overtime ${x.period - 3}`}</li>` : "";
+      lastPeriod = x.period;
+      return `${head}<li><span class="gtime">${esc(x.time)}</span>${logoBox(team)}<span><b>${esc(x.scorer)}</b>${x.assists.length ? ` <span class="gast">(${x.assists.map(esc).join(", ")})</span>` : " <span class=\"gast\">(unassisted)</span>"}${tags}</span>
+        <span class="gscore">${score[g[2]]}–${score[g[1]]}</span></li>`;
+    }).join("");
+    return `<div class="gs">${items ? `<ul class="goals">${items}</ul>` : `<p class="wk-none">No goals before the shootout.</p>`}
+      ${g[5] === 3 ? `<p class="wk-none">Decided in a shootout.</p>` : ""}
+      <p class="wk-none">Score shown away–home. PP power play, SH shorthanded, EN empty net, PS penalty shot.</p></div>`;
+  }
+
+  async function loadGoals(id) {
+    if (state.goals.has(id)) return;
+    let s = { goals: null };
+    try { const res = await fetch(`/api/game/${encodeURIComponent(id)}`); if (res.ok) s = await res.json(); } catch {}
+    state.goals.set(id, s);
+    render();
   }
 
   function renderFav() {
@@ -393,7 +433,7 @@
     const describe = (g) => {
       const home = g[1] === t.id;
       const opp = name(home ? g[2] : g[1]);
-      if (!g[5]) return `${day(g[0])} ${home ? "vs" : "at"} ${esc(opp)}`;
+      if (!g[5]) return `${when(g)} ${home ? "vs" : "at"} ${esc(opp)}`;
       const us = home ? g[3] : g[4], them = home ? g[4] : g[3];
       const res = us > them ? "W" : "L";
       const extra = g[5] === 2 ? " OT" : g[5] === 3 ? " SO" : "";
@@ -441,6 +481,14 @@
   $("#main").addEventListener("click", (e) => {
     const b = e.target.closest("button.expand");
     if (!b) return;
+    if (b.dataset.game) {
+      const id = b.dataset.game;
+      if (state.openGames.has(id)) state.openGames.delete(id); else { state.openGames.add(id); loadGoals(id); }
+      render();
+      const again = document.querySelector(`button.expand[data-game="${CSS.escape(id)}"]`);
+      if (again) again.focus({ preventScroll: true });
+      return;
+    }
     const id = b.dataset.team;
     state.open.has(id) ? state.open.delete(id) : state.open.add(id);
     render();

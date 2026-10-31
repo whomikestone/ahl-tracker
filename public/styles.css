@@ -115,6 +115,20 @@ table.games th.date, table.games td.date, table.games th.opp, table.games td.opp
 table.games td.opp a { display: inline-flex; align-items: center; gap: 8px; color: inherit; text-decoration: none; font-weight: 600; }
 table.games td.opp a:hover span { text-decoration: underline; text-underline-offset: 3px; }
 table.games td.res { font-weight: 700; }
+table.games th.time, table.games td.time { text-align: left; }
+button.expand.game { display: inline-flex; gap: 6px; }
+.gchev { color: var(--muted); font-size: 0.8rem; transition: transform .15s; }
+button.expand.game[aria-expanded="true"] .gchev { transform: rotate(180deg); }
+.gs { position: sticky; left: 16px; max-width: min(560px, calc(100vw - 64px)); }
+.gs p { margin: 8px 0 0; }
+ul.goals { list-style: none; margin: 0; padding: 0; }
+ul.goals li { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+ul.goals li.gper { font: 600 1rem var(--display); color: var(--muted); padding-top: 10px; }
+ul.goals li.gper:first-child { padding-top: 0; }
+.gtime { width: 3.2em; flex: none; color: var(--muted); font-variant-numeric: tabular-nums; }
+.gast { color: var(--muted); }
+.gtag { display: inline-block; font-size: 0.72rem; font-weight: 700; color: var(--blue); border: 1px solid var(--blue); border-radius: 999px; padding: 0 6px; margin-left: 6px; }
+.gscore { margin-left: auto; padding-left: 12px; white-space: nowrap; font-weight: 600; font-variant-numeric: tabular-nums; }
 
 .odds { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; min-width: 96px; }
 .bar { width: 48px; height: 6px; background: var(--crease); border-radius: 3px; overflow: hidden; }
