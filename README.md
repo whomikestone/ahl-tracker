@@ -42,6 +42,9 @@ waiting until 3 a.m. After that, it updates nightly.
   it for good, since finished games don't change. If the feed's answer can't be read
   or doesn't match the final score, visitors get a link to the official game page, and
   that game isn't retried for a day.
+- `/api/game-check/<game id>?token=YOUR_REFRESH_TOKEN` shows what the stats feed sends
+  for one finished game's summary, cut down to its outline and first goal, and why the
+  site accepted or rejected it. Use it if goal details stop showing up.
 
 ## If something goes wrong
 

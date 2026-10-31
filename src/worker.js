@@ -224,6 +224,26 @@ function parseGoals(raw) {
   });
 }
 
+const SUMMARY_SOURCES = (id) => [{ view: "gamesummary", game_id: id }, { feed: "statviewfeed", view: "gameSummary", game_id: id }];
+
+// Reads one feed answer for schedule row g. Returns { goals } if every goal checks out
+// against the final score, or { reason } saying why not.
+function checkGoals(raw, g) {
+  let goals = parseGoals(raw);
+  if (!goals) return { reason: "no goals list found in the answer" };
+  if (g[5] === 3) goals = goals.filter((x) => x.period <= 4); // leave out shootout attempts
+  // Goals each team scored before any shootout (a shootout win adds one to the winner's score).
+  const so = g[5] === 3;
+  const expected = { [g[1]]: g[3] - (so && g[3] > g[4] ? 1 : 0), [g[2]]: g[4] - (so && g[4] > g[3] ? 1 : 0) };
+  const bad = goals.find((x) => !x.scorer || !x.period || !(x.team in expected));
+  if (bad) return { reason: `a goal is missing its scorer, period, or a team from this game: ${JSON.stringify(bad)}` };
+  const counts = [g[1], g[2]].map((t) => goals.filter((x) => x.team === t).length);
+  if (counts[0] !== expected[g[1]] || counts[1] !== expected[g[2]]) {
+    return { reason: `goal counts ${counts.join("-")} (home-away) don't match the score ${expected[g[1]]}-${expected[g[2]]}` };
+  }
+  return { goals };
+}
+
 async function serveGame(env, id) {
   if (!/^\d+$/.test(id)) return json({ error: "Unknown game" }, 404);
   const key = `game:v${SUMMARY_VERSION}:${id}`;
@@ -238,15 +258,10 @@ async function serveGame(env, id) {
   const data = JSON.parse((await env.DATA.get("data")) || "null");
   const g = data && data.games.find((x) => x[6] === id);
   if (!g || !g[5]) return json({ error: "Not a finished game" }, 404);
-  // Goals each team scored before any shootout (a shootout win adds one to the winner's score).
-  const so = g[5] === 3;
-  const expected = { [g[1]]: g[3] - (so && g[3] > g[4] ? 1 : 0), [g[2]]: g[4] - (so && g[4] > g[3] ? 1 : 0) };
-  for (const params of [{ view: "gamesummary", game_id: id }, { feed: "statviewfeed", view: "gameSummary", game_id: id }]) {
+  for (const params of SUMMARY_SOURCES(id)) {
     try {
-      let goals = parseGoals(await feed(env, params));
-      if (goals && g[5] === 3) goals = goals.filter((x) => x.period <= 4); // leave out shootout attempts
-      if (!goals || goals.some((x) => !x.scorer || !x.period || !(x.team in expected))) continue;
-      if ([g[1], g[2]].some((t) => goals.filter((x) => x.team === t).length !== expected[t])) continue;
+      const { goals } = checkGoals(await feed(env, params), g);
+      if (!goals) continue;
       const body = JSON.stringify({ goals });
       await env.DATA.put(key, body);
       return new Response(body, { headers: { "Content-Type": "application/json", ...hdr } });
@@ -254,6 +269,47 @@ async function serveGame(env, id) {
   }
   await env.DATA.put(`${key}:miss`, "1", { expirationTtl: 86400 });
   return json({ goals: null }, 200, miss);
+}
+
+// What the feed sends for one game, cut down to something readable, and why it was or wasn't
+// accepted: /api/game-check/<game id>?token=YOUR_REFRESH_TOKEN. For fixing parseGoals.
+function outline(v, depth = 0) {
+  if (Array.isArray(v)) return v.length ? [`${v.length} items, first:`, depth < 3 ? outline(v[0], depth + 1) : "…"] : "empty list";
+  if (v && typeof v === "object") {
+    if (depth >= 3) return `{${Object.keys(v).slice(0, 12).join(", ")}${Object.keys(v).length > 12 ? ", …" : ""}}`;
+    return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, outline(x, depth + 1)]));
+  }
+  return typeof v === "string" && v.length > 60 ? `${v.slice(0, 60)}…` : v;
+}
+function firstGoal(v, path = "") {
+  if (!v || typeof v !== "object") return null;
+  for (const [k, x] of Object.entries(v)) {
+    if (Array.isArray(x) && /goal/i.test(k) && x[0] && typeof x[0] === "object") return { at: `${path}${k}`, count: x.length, first: x[0] };
+    const found = firstGoal(x, `${path}${k}.`);
+    if (found) return found;
+  }
+  return null;
+}
+async function checkGame(env, id) {
+  const data = JSON.parse((await env.DATA.get("data")) || "null");
+  const g = data && data.games.find((x) => x[6] === id);
+  if (!g || !g[5]) return json({ error: "Not a finished game in this season's schedule" }, 404, { "Cache-Control": "no-store" });
+  const report = { game: id, score: `${g[3]}-${g[4]} (home-away)`, sources: [] };
+  for (const params of SUMMARY_SOURCES(id)) {
+    const entry = { request: params };
+    try {
+      const raw = await feed(env, params);
+      const result = checkGoals(raw, g);
+      entry.accepted = !!result.goals;
+      if (result.reason) entry.reason = result.reason;
+      entry.firstGoalAsSent = firstGoal(raw);
+      entry.outline = outline(raw);
+    } catch (err) {
+      entry.error = String(err.message || err);
+    }
+    report.sources.push(entry);
+  }
+  return json(report, 200, { "Cache-Control": "no-store" });
 }
 
 // ---- Team logos ----
@@ -330,6 +386,11 @@ export default {
 
     // Who scored, period by period, for one finished game: /api/game/<game id>
     if (url.pathname.startsWith("/api/game/")) return serveGame(env, decodeURIComponent(url.pathname.slice(10)));
+
+    if (url.pathname.startsWith("/api/game-check/")) {
+      if (!env.REFRESH_TOKEN || url.searchParams.get("token") !== env.REFRESH_TOKEN) return json({ error: "Wrong or missing token" }, 403);
+      return checkGame(env, decodeURIComponent(url.pathname.slice(16)));
+    }
 
     // Team logos, served from this site: /logo/<team id>
     if (url.pathname.startsWith("/logo/")) return serveLogo(env, ctx, decodeURIComponent(url.pathname.slice(6)));
