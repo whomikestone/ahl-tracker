@@ -196,7 +196,7 @@ function pacific(date) {
 // The feed's game summary format isn't documented, so this accepts the field names
 // HockeyTech is known to use and only keeps a summary whose goal count matches the
 // final score. Anything else shows visitors a link to the official game page instead.
-const SUMMARY_VERSION = 1;
+const SUMMARY_VERSION = 2; // raise to retry games that showed "not available" within the last day
 const flag = (v) => v === true || String(v) === "1";
 const person = (p) => (p && typeof p === "object" ? [p.first_name ?? p.firstName, p.last_name ?? p.lastName].filter(Boolean).join(" ") : "");
 
@@ -214,7 +214,9 @@ function parseGoals(raw) {
       period: Number(g.period_id ?? (g.period && g.period.id) ?? (g._period && g._period.id)) || 0,
       time: String(g.time || ""),
       team: String(g.team_id ?? (g.team && g.team.id) ?? ""),
-      scorer: person(g.goal_scorer || g.scorer),
+      // The AHL's statviewfeed calls it scoredBy; also take any other "scor…" field holding a player.
+      scorer: person(g.scoredBy || g.goal_scorer || g.scorer ||
+        Object.entries(g).find(([k, v]) => /scor/i.test(k) && v && typeof v === "object" && (v.firstName || v.first_name))?.[1]),
       assists: assists.map(person).filter(Boolean),
       pp: flag(g.power_play ?? props.isPowerPlay),
       sh: flag(g.short_handed ?? props.isShortHanded),
@@ -224,7 +226,8 @@ function parseGoals(raw) {
   });
 }
 
-const SUMMARY_SOURCES = (id) => [{ view: "gamesummary", game_id: id }, { feed: "statviewfeed", view: "gameSummary", game_id: id }];
+// The AHL feed's game summary lives in statviewfeed (modulekit has no gamesummary view).
+const SUMMARY_SOURCES = (id) => [{ feed: "statviewfeed", view: "gameSummary", game_id: id }];
 
 // Reads one feed answer for schedule row g. Returns { goals } if every goal checks out
 // against the final score, or { reason } saying why not.
@@ -285,7 +288,7 @@ function outline(v, depth = 0) {
 function firstGoal(v, path = "") {
   if (!v || typeof v !== "object") return null;
   for (const [k, x] of Object.entries(v)) {
-    if (Array.isArray(x) && /goal/i.test(k) && x[0] && typeof x[0] === "object") return { at: `${path}${k}`, count: x.length, first: x[0] };
+    if (Array.isArray(x) && /^goals$/i.test(k) && x[0] && typeof x[0] === "object") return { at: `${path}${k}`, count: x.length, first: x[0] };
     const found = firstGoal(x, `${path}${k}.`);
     if (found) return found;
   }

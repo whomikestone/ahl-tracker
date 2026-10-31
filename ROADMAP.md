@@ -43,9 +43,10 @@ New pages or new calculations, built on data the app already has.
 - [x] Puck-drop times for upcoming games, in the visitor's time zone
 - [x] Confirm game times are live (October 30 refresh: 1,000 of 1,000 upcoming games had a
       start time, from `GameDateISO8601`)
-- [ ] Check the goal details against the real feed once live: open a few finished games.
-      If they all say "not available", the feed's game summary format differs from what
-      `parseGoals` in `src/worker.js` expects and needs adjusting
+- [ ] Confirm goal details show on the live site. First try said "not available" for every
+      game; `/api/game-check` showed the summary comes from statviewfeed with the scorer in
+      `scoredBy`, and `parseGoals` now reads that. If it breaks again, `/api/game-check`
+      shows why
 - [ ] Check the AHL game-page links (`theahl.com/stats/game-center/<game id>`) open the
       right game
 - [x] Team dropdown: next three games and a "Full schedule" link (needs team pages)

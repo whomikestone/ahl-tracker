@@ -5,6 +5,7 @@
 - Upcoming games now show the puck-drop time in your own time zone: on team pages (in a new Time column), in the team card's next game, and in the next three games when you tap a team. Times appear after the next nightly update.
 - Game times are now read from more places in the AHL's schedule data, so they show up even when the AHL lists a game's time in a different format.
 - Made the nightly update lighter, so it finishes reliably within Cloudflare's limits.
+- Fixed goal details on team pages, which said "not available" for every game.
 
 ## October 24, 2026
 - Added team pages. Pick a team from the "Your team" list and choose "Full season and schedule", or open a team's row in any table. Each page shows every game so far, newest first, with the score, the result (W, L, OTL or SOL), the points earned, and the season record after each game. It also lists the games still to play and the team's home and road records.
