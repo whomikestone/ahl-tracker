@@ -80,13 +80,25 @@ function gameType(g) {
 // time plus a time zone name. Returns null if none gives a real time.
 const TZ_ABBR = { EST: -5, EDT: -4, CST: -6, CDT: -5, MST: -7, MDT: -6, PST: -8, PDT: -7, AST: -4, ADT: -3 };
 const pad = (n) => String(n).padStart(2, "0");
-function zoneOffset(tz, date, h, m) {
-  try {
-    const name = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "longOffset" })
-      .formatToParts(new Date(`${date}T${pad(h)}:${pad(m)}:00Z`)).find((x) => x.type === "timeZoneName").value; // "GMT-05:00"
-    const o = name.match(/GMT([+-])(\d\d):?(\d\d)?/);
-    return o ? (o[1] === "-" ? -1 : 1) * (Number(o[2]) + Number(o[3] || 0) / 60) : name === "GMT" ? 0 : undefined;
-  } catch { return undefined; }
+// Standard UTC offsets for the time zones AHL arenas use. All observe daylight time except
+// Arizona (Tucson). A small table instead of Intl time zones, which are slow to load and would
+// push the nightly job past the free plan's CPU limit.
+const ZONES = [[/Phoenix|Arizona/i, -7, false], [/New_York|Toronto|Detroit|Montreal|Eastern/i, -5, true],
+  [/Chicago|Winnipeg|Central/i, -6, true], [/Denver|Edmonton|Boise|Mountain/i, -7, true], [/Los_Angeles|Vancouver|Pacific/i, -8, true]];
+// US and Canadian daylight time: second Sunday in March to first Sunday in November.
+function inDaylightTime(date) {
+  const [y, m, d] = date.split("-").map(Number);
+  const sunday = (month, nth) => 1 + ((7 - new Date(Date.UTC(y, month - 1, 1)).getUTCDay()) % 7) + 7 * (nth - 1);
+  return (m > 3 || (m === 3 && d >= sunday(3, 2))) && (m < 11 || (m === 11 && d < sunday(11, 1)));
+}
+const offsets = new Map(); // "America/Chicago|2026-11-20" -> -6, worked out once per zone and day
+function zoneOffset(tz, date) {
+  const key = `${tz}|${date}`;
+  if (!offsets.has(key)) {
+    const z = ZONES.find(([re]) => re.test(tz));
+    offsets.set(key, z ? z[1] + (z[2] && inDaylightTime(date) ? 1 : 0) : undefined);
+  }
+  return offsets.get(key);
 }
 function startOf(g) {
   const iso = String(g.GameDateISO8601 || "");
@@ -99,7 +111,7 @@ function startOf(g) {
     let h = Number(t[1]);
     if (t[3]) h = (h % 12) + (/pm/i.test(t[3]) ? 12 : 0);
     if (h > 23 || (h === 0 && !t[3])) continue;
-    const off = TZ_ABBR[(t[4] || "").toUpperCase()] ?? (g.timezone ? zoneOffset(g.timezone, date, h, Number(t[2])) : undefined);
+    const off = TZ_ABBR[(t[4] || "").toUpperCase()] ?? (g.timezone ? zoneOffset(String(g.timezone), date) : undefined);
     if (off === undefined) continue;
     const sign = off < 0 ? "-" : "+", a = Math.abs(off);
     return `${date}T${pad(h)}:${t[2]}:00${sign}${pad(Math.floor(a))}:${pad(Math.round((a % 1) * 60))}`;
