@@ -272,7 +272,8 @@ async function serveGame(env, id) {
 }
 
 // What the feed sends for one game, cut down to something readable, and why it was or wasn't
-// accepted: /api/game-check/<game id>?token=YOUR_REFRESH_TOKEN. For fixing parseGoals.
+// accepted: /api/game-check?token=YOUR_REFRESH_TOKEN checks the most recent finished game, or
+// /api/game-check/<game id>?token=... a particular one. For fixing parseGoals.
 function outline(v, depth = 0) {
   if (Array.isArray(v)) return v.length ? [`${v.length} items, first:`, depth < 3 ? outline(v[0], depth + 1) : "…"] : "empty list";
   if (v && typeof v === "object") {
@@ -292,9 +293,11 @@ function firstGoal(v, path = "") {
 }
 async function checkGame(env, id) {
   const data = JSON.parse((await env.DATA.get("data")) || "null");
-  const g = data && data.games.find((x) => x[6] === id);
-  if (!g || !g[5]) return json({ error: "Not a finished game in this season's schedule" }, 404, { "Cache-Control": "no-store" });
-  const report = { game: id, score: `${g[3]}-${g[4]} (home-away)`, sources: [] };
+  const finished = data ? data.games.filter((x) => x[5] && x[6]) : [];
+  const g = id ? finished.find((x) => x[6] === id) : finished[finished.length - 1];
+  if (!g) return json({ error: id ? "Not a finished game in this season's schedule; try /api/game-check without a game number" : "No finished games yet" }, 404, { "Cache-Control": "no-store" });
+  id = g[6];
+  const report = { game: id, date: g[0], score: `${g[3]}-${g[4]} (home-away)`, sources: [] };
   for (const params of SUMMARY_SOURCES(id)) {
     const entry = { request: params };
     try {
@@ -387,9 +390,9 @@ export default {
     // Who scored, period by period, for one finished game: /api/game/<game id>
     if (url.pathname.startsWith("/api/game/")) return serveGame(env, decodeURIComponent(url.pathname.slice(10)));
 
-    if (url.pathname.startsWith("/api/game-check/")) {
+    if (url.pathname === "/api/game-check" || url.pathname.startsWith("/api/game-check/")) {
       if (!env.REFRESH_TOKEN || url.searchParams.get("token") !== env.REFRESH_TOKEN) return json({ error: "Wrong or missing token" }, 403);
-      return checkGame(env, decodeURIComponent(url.pathname.slice(16)));
+      return checkGame(env, decodeURIComponent(url.pathname.slice(16)));  // "" checks the most recent finished game
     }
 
     // Team logos, served from this site: /logo/<team id>
