@@ -41,6 +41,9 @@ New pages or new calculations, built on data the app already has.
 - [x] Team page: tap a game to see who scored, period by period (each game's details are
       fetched from the feed once, the first time someone opens it, then kept for good)
 - [x] Puck-drop times for upcoming games, in the visitor's time zone
+- [ ] Confirm game times are live: after a refresh, `/api/status` should say most
+      upcoming games have a start time. If it says 0, use its `sampleUpcomingGame` to
+      update `startOf` in `src/worker.js`
 - [ ] Check the goal details against the real feed once live: open a few finished games.
       If they all say "not available", the feed's game summary format differs from what
       `parseGoals` in `src/worker.js` expects and needs adjusting

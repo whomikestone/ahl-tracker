@@ -33,7 +33,9 @@ waiting until 3 a.m. After that, it updates nightly.
 
 ## Useful links
 
-- `/api/status` shows when the last update ran and whether it worked.
+- `/api/status` shows when the last update ran and whether it worked, how many
+  upcoming games have a start time, and one upcoming game exactly as the stats feed
+  sent it (handy if game times go missing). `/api/refresh` shows the same.
 - `/api/refresh?token=YOUR_REFRESH_TOKEN` forces an update now.
 - `/api/game/<game id>` returns who scored in one finished game. The worker fetches it
   from the stats feed the first time anyone opens that game on a team page and keeps

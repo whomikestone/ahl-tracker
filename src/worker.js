@@ -75,6 +75,38 @@ function gameType(g) {
   return 1;
 }
 
+// Puck-drop time as "YYYY-MM-DDTHH:MM:00-05:00", from whichever schedule fields the feed fills in:
+// a full ISO date-time, a time like "7:05 pm EST" (game_status before puck drop), or a 24-hour
+// time plus a time zone name. Returns null if none gives a real time.
+const TZ_ABBR = { EST: -5, EDT: -4, CST: -6, CDT: -5, MST: -7, MDT: -6, PST: -8, PDT: -7, AST: -4, ADT: -3 };
+const pad = (n) => String(n).padStart(2, "0");
+function zoneOffset(tz, date, h, m) {
+  try {
+    const name = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "longOffset" })
+      .formatToParts(new Date(`${date}T${pad(h)}:${pad(m)}:00Z`)).find((x) => x.type === "timeZoneName").value; // "GMT-05:00"
+    const o = name.match(/GMT([+-])(\d\d):?(\d\d)?/);
+    return o ? (o[1] === "-" ? -1 : 1) * (Number(o[2]) + Number(o[3] || 0) / 60) : name === "GMT" ? 0 : undefined;
+  } catch { return undefined; }
+}
+function startOf(g) {
+  const iso = String(g.GameDateISO8601 || "");
+  if (/^\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d)?([+-]\d\d:?\d\d|Z)$/.test(iso) && !/T00:00/.test(iso)) return iso;
+  const date = String(g.date_played || iso).slice(0, 10);
+  if (!/^\d{4}-\d\d-\d\d$/.test(date)) return null;
+  for (const text of [g.game_status, g.scheduled_time, g.schedule_time, g.game_time, g.time]) {
+    const t = String(text || "").trim().match(/^(\d{1,2}):(\d\d)(?::\d\d)?\s*(am|pm)?\s*([A-Z]{2,4})?\b/i);
+    if (!t) continue;
+    let h = Number(t[1]);
+    if (t[3]) h = (h % 12) + (/pm/i.test(t[3]) ? 12 : 0);
+    if (h > 23 || (h === 0 && !t[3])) continue;
+    const off = TZ_ABBR[(t[4] || "").toUpperCase()] ?? (g.timezone ? zoneOffset(g.timezone, date, h, Number(t[2])) : undefined);
+    if (off === undefined) continue;
+    const sign = off < 0 ? "-" : "+", a = Math.abs(off);
+    return `${date}T${pad(h)}:${t[2]}:00${sign}${pad(Math.floor(a))}:${pad(Math.round((a % 1) * 60))}`;
+  }
+  return null;
+}
+
 async function refresh(env) {
   const season = await findSeason(env);
   const rawTeams = list(await feed(env, { view: "teamsbyseason", season_id: season.id }), "Teamsbyseason");
@@ -96,16 +128,15 @@ async function refresh(env) {
     .filter((g) => !/cancel/i.test(String(g.game_status || "")))
     .map((g) => {
       const type = gameType(g);
-      const iso = String(g.GameDateISO8601 || "");
       return [
-        String(g.date_played || iso).slice(0, 10),
+        String(g.date_played || g.GameDateISO8601 || "").slice(0, 10),
         String(g.home_team),
         String(g.visiting_team),
         type ? Number(g.home_goal_count) : null,
         type ? Number(g.visiting_goal_count) : null,
         type,
         String(g.game_id || g.id || ""),
-        !type && /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(iso) ? iso : null,
+        type ? null : startOf(g),
       ];
     })
     .filter((g) => ids.has(g[1]) && ids.has(g[2]))
@@ -118,7 +149,15 @@ async function refresh(env) {
 
   const data = { updatedAt: new Date().toISOString(), season, teams, games };
   await env.DATA.put("data", JSON.stringify(data));
-  await env.DATA.put("status", JSON.stringify({ ok: true, at: data.updatedAt, teams: teams.length, games: games.length }));
+  // How many upcoming games got a start time, plus one upcoming game exactly as the feed sent it,
+  // so a missing time can be traced to the feed's field names from /api/status.
+  const upcoming = games.filter((g) => !g[5]);
+  const rawUpcoming = rawGames.find((g) => !gameType(g) && !/cancel/i.test(String(g.game_status || "")));
+  await env.DATA.put("status", JSON.stringify({
+    ok: true, at: data.updatedAt, teams: teams.length, games: games.length,
+    times: `${upcoming.filter((g) => g[7]).length} of ${upcoming.length} upcoming games have a start time`,
+    sampleUpcomingGame: rawUpcoming || null,
+  }));
   return data;
 }
 
@@ -298,7 +337,7 @@ export default {
       if (!env.REFRESH_TOKEN || url.searchParams.get("token") !== env.REFRESH_TOKEN) return json({ error: "Wrong or missing token" }, 403);
       try {
         const d = await safeRefresh(env);
-        return json({ ok: true, updatedAt: d.updatedAt, season: d.season, teams: d.teams.length, games: d.games.length });
+        return json({ season: d.season, ...JSON.parse(await env.DATA.get("status")) }, 200, { "Cache-Control": "no-store" });
       } catch (err) {
         return json({ ok: false, error: String(err.message || err) }, 502);
       }
