@@ -1,5 +1,9 @@
 # What's new
 
+## November 15, 2026
+- Tapping a team now shows its last 7 days, through last night's games, instead of the last full Monday-to-Sunday week. It used to leave out games played since Monday, so it could look out of date. The ranks and playoff odds in that panel are now today's, and the arrows show how much they moved over those 7 days. The arrows in the tables, the odds page, and your team card work the same way. The Trends chart still adds a new week every Monday.
+- Streaks (the STK column) now match the AHL's. They used to count only identical results in a row, so a team that lost in regulation and then in overtime showed "OTL1". Now a streak is either a point streak (games in a row without a regulation loss, in green) or a winless streak (games in a row without a win, in red), shown as W-L-OTL-SOL. For example, 5-0-2-0 means seven straight games with a point.
+
 ## October 31, 2026
 - On team pages, tap a game's score to see who scored: each goal by period, with the time, the scorer, the assists, the running score, and whether it was a power-play, shorthanded, empty-net, or penalty-shot goal. If the details aren't available for a game, there's a link to its official AHL game summary instead.
 - Upcoming games now show the puck-drop time in your own time zone: on team pages (in a new Time column), in the team card's next game, and in the next three games when you tap a team. Times appear after the next nightly update.

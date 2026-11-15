@@ -51,9 +51,17 @@
       const last = t.results.slice(-10);
       const n10 = (r) => last.filter((x) => x.r === r).length;
       t.l10 = `${n10("W")}-${n10("L")}-${n10("OTL")}-${n10("SOL")}`; // AHL style: W-L-OTL-SOL
-      let n = 0; const lastR = t.results.length ? t.results[t.results.length - 1].r : null;
-      for (let i = t.results.length - 1; i >= 0 && t.results[i].r === lastR; i--) n++;
-      t.streak = lastR ? `${lastR}${n}` : "";
+      // AHL-style streak: the longer of the current point streak (no regulation losses) and
+      // winless streak (no wins), as W-L-OTL-SOL. Matches the streak on theahl.com.
+      const run = (keep) => {
+        const c = { W: 0, L: 0, OTL: 0, SOL: 0 };
+        for (let i = t.results.length - 1; i >= 0 && keep(t.results[i].r); i--) c[t.results[i].r]++;
+        return { c, n: c.W + c.L + c.OTL + c.SOL };
+      };
+      const pts = run((r) => r !== "L"), winless = run((r) => r !== "W");
+      const best = pts.n >= winless.n ? pts : winless;
+      t.streak = best.n ? `${best.c.W}-${best.c.L}-${best.c.OTL}-${best.c.SOL}` : "";
+      t.streakType = best.n ? (best === pts ? "point" : "winless") : "";
       t.remaining = 0;
     }
     for (const [, h, a, , , type] of data.games) if (!type) { rows.get(h).remaining++; rows.get(a).remaining++; }
@@ -178,8 +186,15 @@
     return { ...data, updatedAt: cutoff, games: data.games.map((g) => (g[5] && g[0] <= cutoff ? g : [g[0], g[1], g[2], null, null, 0])) };
   }
 
+  // The last 7 days through last night, so the "recent" view always includes the latest games.
+  function lastSevenDays(updatedAt) {
+    const end = addDays(pacificDate(updatedAt), -1); // last fully finished day
+    return { start: addDays(end, -6), end, prevEnd: addDays(end, -7) };
+  }
+
+  // Current ranks and odds, plus how they moved over the last 7 days.
   function weekly(data, sims = 2000) {
-    const w = lastWeek(data.updatedAt);
+    const w = lastSevenDays(data.updatedAt);
     const A = asOf(data, w.end), B = asOf(data, w.prevEnd);
     const sA = computeStandings(A), sB = computeStandings(B);
     const oA = simulate(A, sA, sims), oB = simulate(B, sB, sims);
