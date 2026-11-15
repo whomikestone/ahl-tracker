@@ -6,11 +6,14 @@ cumbersome. To-dos are grouped by how much work they take. Check them off as the
 ## Done
 - [x] Updated for the 2026-27 realignment (Bridgeport moved to Hamilton, now in the North)
 - [x] Standings verified against the official AHL standings (all 32 teams matched)
+- [x] Streaks shown the AHL way (point or winless streak, W-L-OTL-SOL); all 32 teams
+      matched the AHL feed on November 15
 
 ## Milestone 1: Quick wins
 Small changes, mostly a few lines each.
 
-- [ ] Once the latest code is live, check `/api/status` (ok, 32 teams, about 1,150 games)
+- [x] Once the latest code is live, check `/api/status` (ok, 32 teams, about 1,150 games).
+      Checked November 15: ok, 32 teams, 1,152 games, updated at 3 a.m. Pacific
 - [ ] Check `/api/logos` and fix any outdated logos through `LOGO_OVERRIDES`
 - [ ] Confirm the 2026-27 playoff format (the app assumes Atlantic 5 of 7, North 6 of 8,
       Central 5 of 7, Pacific 7 of 10). As of October 17 there's no 2026-27 announcement;

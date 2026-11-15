@@ -65,7 +65,11 @@
       <span><span class="full">${esc(t.name)}</span><span class="short">${esc(t.nickname || t.name)}</span>${showDiv ? ` <span class="div-tag">${esc(t.div)}</span>` : ""}</span><span class="chev" aria-hidden="true">▾</span></button></td>`;
   }
 
-  function streakCell(s) { return s ? `<span class="${s.startsWith("W") ? "W" : s.startsWith("L") ? "L" : ""}">${s}</span>` : "–"; }
+  function streakCell(t) {
+    if (!t.streak) return "–";
+    const label = t.streakType === "point" ? "point streak" : "winless streak";
+    return `<span class="${t.streakType === "point" ? "W" : "L"}" title="${label}">${t.streak}</span>`;
+  }
 
   const MOVE_KEY = { divRank: "dDiv", confRank: "dConf", leagueRank: "dLeague" };
 
@@ -87,7 +91,7 @@
         <td>${t.gp}</td><td>${t.w}</td><td>${t.l}</td><td>${t.otl}</td><td>${t.sol}</td>
         <td class="pts">${t.pts}</td><td>${t.gp ? pct(t.pct) : "–"}</td>
         <td>${t.rw}</td><td>${t.row}</td>
-        <td>${signed(t.gd)}</td><td>${t.gp ? t.l10 : "–"}</td><td>${streakCell(t.streak)}</td>
+        <td>${signed(t.gd)}</td><td>${t.gp ? t.l10 : "–"}</td><td>${streakCell(t)}</td>
         <td>${oddsCell(o ? o.playoffs : 0)}</td>`;
       return withDetail(t, row, 16, line);
     }).join("");
@@ -98,7 +102,7 @@
       <th scope="col" title="Points">PTS</th><th scope="col" title="Points percentage (the AHL ranks by this)">PCT</th>
       <th scope="col" title="Regulation wins (first tiebreaker)">RW</th><th scope="col" title="Regulation + overtime wins (second tiebreaker)">ROW</th>
       <th scope="col" title="Goal differential">GD</th><th scope="col" title="Last 10 games: W-L-OTL-SOL">L10</th>
-      <th scope="col" title="Current streak">STK</th><th scope="col"><span class="wide-only">Playoffs</span><span class="narrow-only">Odds</span></th></tr></thead>
+      <th scope="col" title="Current point streak or winless streak: W-L-OTL-SOL">STK</th><th scope="col"><span class="wide-only">Playoffs</span><span class="narrow-only">Odds</span></th></tr></thead>
       <tbody>${rows}</tbody></table></div>`;
   }
 
