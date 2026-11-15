@@ -8,8 +8,9 @@ cumbersome. To-dos are grouped by how much work they take. Check them off as the
 - [x] Standings verified against the official AHL standings (all 32 teams matched)
 - [x] Team panels and movement arrows cover the last 7 days through last night, so they
       always include the latest games (the Trends chart stays weekly)
-- [x] Streaks shown the AHL way (point or winless streak, W-L-OTL-SOL); all 32 teams
-      matched the AHL feed on November 15
+- [x] Streaks match the AHL's win/loss streak (W3, L2; overtime and shootout losses count
+      as losses); all 32 teams matched the AHL feed on November 15. A W-L-OTL-SOL point/winless
+      streak was tried and dropped: harder to read at a glance
 
 ## Milestone 1: Quick wins
 Small changes, mostly a few lines each.
