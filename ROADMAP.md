@@ -6,6 +6,8 @@ cumbersome. To-dos are grouped by how much work they take. Check them off as the
 ## Done
 - [x] Updated for the 2026-27 realignment (Bridgeport moved to Hamilton, now in the North)
 - [x] Standings verified against the official AHL standings (all 32 teams matched)
+- [x] Team panels and movement arrows cover the last 7 days through last night, so they
+      always include the latest games (the Trends chart stays weekly)
 - [x] Streaks shown the AHL way (point or winless streak, W-L-OTL-SOL); all 32 teams
       matched the AHL feed on November 15
 

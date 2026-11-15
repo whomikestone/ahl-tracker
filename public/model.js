@@ -186,8 +186,15 @@
     return { ...data, updatedAt: cutoff, games: data.games.map((g) => (g[5] && g[0] <= cutoff ? g : [g[0], g[1], g[2], null, null, 0])) };
   }
 
+  // The last 7 days through last night, so the "recent" view always includes the latest games.
+  function lastSevenDays(updatedAt) {
+    const end = addDays(pacificDate(updatedAt), -1); // last fully finished day
+    return { start: addDays(end, -6), end, prevEnd: addDays(end, -7) };
+  }
+
+  // Current ranks and odds, plus how they moved over the last 7 days.
   function weekly(data, sims = 2000) {
-    const w = lastWeek(data.updatedAt);
+    const w = lastSevenDays(data.updatedAt);
     const A = asOf(data, w.end), B = asOf(data, w.prevEnd);
     const sA = computeStandings(A), sB = computeStandings(B);
     const oA = simulate(A, sA, sims), oB = simulate(B, sB, sims);

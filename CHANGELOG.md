@@ -1,6 +1,7 @@
 # What's new
 
 ## November 15, 2026
+- Tapping a team now shows its last 7 days, through last night's games, instead of the last full Monday-to-Sunday week. It used to leave out games played since Monday, so it could look out of date. The ranks and playoff odds in that panel are now today's, and the arrows show how much they moved over those 7 days. The arrows in the tables, the odds page, and your team card work the same way. The Trends chart still adds a new week every Monday.
 - Streaks (the STK column) now match the AHL's. They used to count only identical results in a row, so a team that lost in regulation and then in overtime showed "OTL1". Now a streak is either a point streak (games in a row without a regulation loss, in green) or a winless streak (games in a row without a win, in red), shown as W-L-OTL-SOL. For example, 5-0-2-0 means seven straight games with a point.
 
 ## October 31, 2026
