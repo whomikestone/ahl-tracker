@@ -65,11 +65,7 @@
       <span><span class="full">${esc(t.name)}</span><span class="short">${esc(t.nickname || t.name)}</span>${showDiv ? ` <span class="div-tag">${esc(t.div)}</span>` : ""}</span><span class="chev" aria-hidden="true">▾</span></button></td>`;
   }
 
-  function streakCell(t) {
-    if (!t.streak) return "–";
-    const label = t.streakType === "point" ? "point streak" : "winless streak";
-    return `<span class="${t.streakType === "point" ? "W" : "L"}" title="${label}">${t.streak}</span>`;
-  }
+  function streakCell(t) { return t.streak ? `<span class="${t.streak[0]}">${t.streak}</span>` : "–"; }
 
   const MOVE_KEY = { divRank: "dDiv", confRank: "dConf", leagueRank: "dLeague" };
 
@@ -102,7 +98,7 @@
       <th scope="col" title="Points">PTS</th><th scope="col" title="Points percentage (the AHL ranks by this)">PCT</th>
       <th scope="col" title="Regulation wins (first tiebreaker)">RW</th><th scope="col" title="Regulation + overtime wins (second tiebreaker)">ROW</th>
       <th scope="col" title="Goal differential">GD</th><th scope="col" title="Last 10 games: W-L-OTL-SOL">L10</th>
-      <th scope="col" title="Current point streak or winless streak: W-L-OTL-SOL">STK</th><th scope="col"><span class="wide-only">Playoffs</span><span class="narrow-only">Odds</span></th></tr></thead>
+      <th scope="col" title="Current streak: wins or losses in a row">STK</th><th scope="col"><span class="wide-only">Playoffs</span><span class="narrow-only">Odds</span></th></tr></thead>
       <tbody>${rows}</tbody></table></div>`;
   }
 

@@ -51,17 +51,13 @@
       const last = t.results.slice(-10);
       const n10 = (r) => last.filter((x) => x.r === r).length;
       t.l10 = `${n10("W")}-${n10("L")}-${n10("OTL")}-${n10("SOL")}`; // AHL style: W-L-OTL-SOL
-      // AHL-style streak: the longer of the current point streak (no regulation losses) and
-      // winless streak (no wins), as W-L-OTL-SOL. Matches the streak on theahl.com.
-      const run = (keep) => {
-        const c = { W: 0, L: 0, OTL: 0, SOL: 0 };
-        for (let i = t.results.length - 1; i >= 0 && keep(t.results[i].r); i--) c[t.results[i].r]++;
-        return { c, n: c.W + c.L + c.OTL + c.SOL };
-      };
-      const pts = run((r) => r !== "L"), winless = run((r) => r !== "W");
-      const best = pts.n >= winless.n ? pts : winless;
-      t.streak = best.n ? `${best.c.W}-${best.c.L}-${best.c.OTL}-${best.c.SOL}` : "";
-      t.streakType = best.n ? (best === pts ? "point" : "winless") : "";
+      // Streak like W3 or L2. Overtime and shootout losses count as losses, the same as the
+      // AHL's own win/loss streak.
+      const won = (r) => r === "W";
+      const lastWon = t.results.length ? won(t.results[t.results.length - 1].r) : null;
+      let n = 0;
+      for (let i = t.results.length - 1; i >= 0 && won(t.results[i].r) === lastWon; i--) n++;
+      t.streak = n ? `${lastWon ? "W" : "L"}${n}` : "";
       t.remaining = 0;
     }
     for (const [, h, a, , , type] of data.games) if (!type) { rows.get(h).remaining++; rows.get(a).remaining++; }
